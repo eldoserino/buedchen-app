@@ -142,10 +142,10 @@ async function run() {
     const detail = await placeDetails(place.id)
     await new Promise(r => setTimeout(r, 300))
 
-    const name     = detail.displayName?.text ?? place.displayName?.text
+    const name     = detail.displayName?.text ?? place.displayName?.text ?? null
     const address  = detail.formattedAddress ?? ''
     const plz      = extractPlz(address)
-    const veedel   = plz ? PLZ_VEEDEL[plz] : null
+    const veedel   = plz ? (PLZ_VEEDEL[plz] ?? null) : null
     const lat      = detail.location?.latitude
     const lng      = detail.location?.longitude
 
