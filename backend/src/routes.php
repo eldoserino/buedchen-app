@@ -45,7 +45,7 @@ $app->get('/api/buedchen', function (Request $request, Response $response) {
             FROM buedchen
             WHERE ' . implode(' AND ', $where) . '
             ORDER BY editorial_badges IS NOT NULL DESC, google_rating DESC
-            LIMIT 500';
+            LIMIT 1000';
 
     $stmt = $db->prepare($sql);
     $stmt->execute($bind);

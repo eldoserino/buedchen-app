@@ -6,6 +6,7 @@
   "description": "Import-Script für Google Places → MariaDB",
   "dependencies": {
     "dotenv": "^16.0.0",
-    "mysql2": "^3.0.0"
+    "mysql2": "^3.0.0",
+    "sharp": "^0.33.0"
   }
 }
