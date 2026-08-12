@@ -72,8 +72,9 @@ export default function MapView({ buedchen, onSelect }) {
         zoomControl
       >
         <TileLayer
-          url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          subdomains="abcd"
           maxZoom={20}
         />
         <ClusterLayer buedchen={buedchen} onSelect={onSelect} />
