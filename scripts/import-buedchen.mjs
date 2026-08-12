@@ -19,30 +19,54 @@ const DB = {
 }
 
 const PLZ_VEEDEL = {
-  '50667': 'Altstadt-Nord',     '50668': 'Neustadt-Nord',
-  '50670': 'Neustadt-Nord',     '50672': 'Neustadt-Süd',
-  '50674': 'Belgisches Viertel','50676': 'Altstadt-Süd',
-  '50677': 'Südstadt',          '50678': 'Südstadt',
-  '50679': 'Deutz',             '50733': 'Nippes',
-  '50735': 'Nippes',            '50737': 'Longerich',
-  '50739': 'Bilderstöckchen',   '50823': 'Ehrenfeld',
-  '50825': 'Ehrenfeld',         '50827': 'Bickendorf',
-  '50829': 'Ossendorf',         '50937': 'Sülz',
-  '50939': 'Lindenthal',        '50968': 'Bayenthal',
-  '50969': 'Rondorf',           '50971': 'Zollstock',
-  '50972': 'Marienburg',        '50996': 'Rodenkirchen',
-  '51061': 'Mülheim',           '51063': 'Mülheim',
-  '51065': 'Mülheim',           '51067': 'Holweide',
-  '51069': 'Dellbrück',         '51103': 'Kalk',
-  '51105': 'Kalk',              '51107': 'Vingst',
-  '51143': 'Porz',              '51147': 'Porz',
+  // Innenstadt
+  '50667': 'Altstadt-Nord',      '50668': 'Neustadt-Nord',
+  '50670': 'Neustadt-Nord',      '50672': 'Neustadt-Süd',
+  '50674': 'Belgisches Viertel', '50676': 'Altstadt-Süd',
+  '50677': 'Südstadt',           '50678': 'Südstadt',
+  '50679': 'Deutz',
+  // Norden
+  '50733': 'Nippes',             '50735': 'Nippes',
+  '50737': 'Longerich',          '50738': 'Longerich',
+  '50739': 'Bilderstöckchen',    '50765': 'Chorweiler',
+  '50767': 'Weidenpesch',        '50769': 'Roggendorf-Thenhoven',
+  // Ehrenfeld / Weststadt
+  '50823': 'Ehrenfeld',          '50825': 'Ehrenfeld',
+  '50827': 'Bickendorf',         '50829': 'Ossendorf',
+  '50858': 'Junkersdorf',        '50859': 'Lövenich',
+  '50969': 'Rondorf',
+  // Lindenthal / Sülz
+  '50931': 'Braunsfeld',         '50933': 'Müngersdorf',
+  '50935': 'Lindenthal',         '50937': 'Sülz',
+  '50939': 'Lindenthal',
+  // Süden
+  '50968': 'Bayenthal',          '50971': 'Zollstock',
+  '50972': 'Marienburg',         '50996': 'Rodenkirchen',
+  '50997': 'Rodenkirchen',       '50999': 'Sürth',
+  // Mülheim / Rechtsrheinisch Nord
+  '51061': 'Mülheim',            '51063': 'Mülheim',
+  '51065': 'Mülheim',            '51067': 'Holweide',
+  '51069': 'Dellbrück',          '51071': 'Höhenhaus',
+  '51073': 'Dünnwald',           '51075': 'Stammheim',
+  // Kalk / Rechtsrheinisch Süd
+  '51103': 'Kalk',               '51105': 'Kalk',
+  '51107': 'Vingst',             '51109': 'Humboldt-Gremberg',
+  // Porz / Rechtsrheinisch Süd
+  '51143': 'Porz',               '51147': 'Porz',
   '51149': 'Porz',
 }
 
+const VEEDEL_NAMES = [...new Set(Object.values(PLZ_VEEDEL))]
+
 const SEARCH_QUERIES = [
+  // Allgemeine Kölner Suche
   'Büdchen Köln',
   'Kiosk Köln',
   'Trinkhalle Köln',
+  'Späti Köln',
+  'Spätverkauf Köln',
+  // Per Veedel — Büdchen + Kiosk
+  ...VEEDEL_NAMES.flatMap(v => [`Büdchen ${v}`, `Kiosk ${v}`]),
 ]
 
 const PLACES_BASE = 'https://places.googleapis.com/v1'
@@ -53,7 +77,7 @@ async function textSearch(query, pageToken = null) {
     locationBias: {
       circle: {
         center: { latitude: 50.938, longitude: 6.960 },
-        radius: 20000,
+        radius: 25000,
       }
     },
     maxResultCount: 20,
@@ -77,7 +101,7 @@ async function placeDetails(id) {
   const fields = [
     'id', 'displayName', 'formattedAddress', 'location',
     'rating', 'userRatingCount', 'currentOpeningHours',
-    'nationalPhoneNumber', 'websiteUri', 'photos',
+    'nationalPhoneNumber', 'websiteUri',
   ].join(',')
 
   const res = await fetch(`${PLACES_BASE}/places/${id}?fields=${fields}&languageCode=de`, {
@@ -111,17 +135,26 @@ async function run() {
   const db = await mysql.createConnection(DB)
   console.log('DB verbunden.')
 
-  // Alle Places sammeln
+  // Bereits bekannte Place-IDs laden — Details nur für neue abrufen
+  const [existing] = await db.execute('SELECT google_place_id FROM buedchen WHERE google_place_id IS NOT NULL')
+  const knownIds = new Set(existing.map(r => r.google_place_id))
+  console.log(`${knownIds.size} Büdchen bereits in DB.`)
+
+  // Phase 1: alle Places aus Text Search sammeln
   const seen   = new Set()
   const places = []
 
-  for (const q of SEARCH_QUERIES) {
-    console.log(`Suche: ${q}`)
+  for (const [qi, q] of SEARCH_QUERIES.entries()) {
+    process.stdout.write(`\rQuery ${qi + 1}/${SEARCH_QUERIES.length}: ${q}`.padEnd(70))
     let token = null
     let page  = 0
 
     do {
       const result = await textSearch(q, token)
+      if (result.error) {
+        console.error(`\nAPI-Fehler bei "${q}":`, result.error.message)
+        break
+      }
       for (const p of result.places ?? []) {
         if (!seen.has(p.id)) {
           seen.add(p.id)
@@ -130,15 +163,23 @@ async function run() {
       }
       token = result.nextPageToken ?? null
       page++
-      if (token) await new Promise(r => setTimeout(r, 2000)) // rate limit
-    } while (token && page < 3)
+      if (token) await new Promise(r => setTimeout(r, 2000))
+    } while (token && page < 5)
   }
 
-  console.log(`${places.length} einzigartige Büdchen gefunden.`)
+  const newPlaces = places.filter(p => !knownIds.has(p.id))
+  console.log(`\n\n${places.length} einzigartige Büdchen gefunden (${newPlaces.length} neu, ${places.length - newPlaces.length} bereits bekannt).`)
 
+  if (newPlaces.length === 0) {
+    console.log('Nichts Neues. Fertig.')
+    await db.end()
+    return
+  }
+
+  // Phase 2: Details nur für neue Places abrufen
   let imported = 0
 
-  for (const place of places) {
+  for (const place of newPlaces) {
     const detail = await placeDetails(place.id)
     await new Promise(r => setTimeout(r, 300))
 
@@ -180,10 +221,10 @@ async function run() {
     ])
 
     imported++
-    process.stdout.write(`\r  ${imported}/${places.length} importiert`)
+    process.stdout.write(`\r  ${imported}/${newPlaces.length} importiert`)
   }
 
-  console.log(`\nFertig. ${imported} Büdchen in DB geschrieben.`)
+  console.log(`\nFertig. ${imported} neue Büdchen in DB geschrieben.`)
   await db.end()
 }
 
