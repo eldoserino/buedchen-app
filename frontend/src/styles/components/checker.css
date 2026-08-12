@@ -1,0 +1,18 @@
+.checker {
+  height: 16px;
+  background: repeating-linear-gradient(
+    90deg,
+    currentColor 0 16px,
+    transparent 16px 32px
+  );
+  flex-shrink: 0;
+}
+
+.checker--sm {
+  height: 10px;
+  background: repeating-linear-gradient(
+    90deg,
+    currentColor 0 10px,
+    transparent 10px 20px
+  );
+}

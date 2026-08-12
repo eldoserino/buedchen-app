@@ -1,0 +1,59 @@
+:root {
+  /* Flächenfarben — die einzigen erlaubten Segment-Hintergründe */
+  --creme:      #F7EFD8;
+  --creme-deep: #EDE0BE;
+  --creme-dim:  #DFCFA6;
+  --rot:        #D81E1E;
+  --rot-deep:   #A81414;
+  --tinte:      #16120C;
+  --tinte-soft: #241E14;
+
+  /* On-Colors */
+  --on-creme:     #1C1509;
+  --on-creme-dim: #6B5A3C;
+  --on-rot:       #FDF6E4;
+  --on-tinte:     #F2E9D2;
+
+  /* Akzente — AUSSCHLIESSLICH für Tags und Zähler, nie Fläche */
+  --pink: #F2A0C0;
+  --blau: #3B5FBF;
+  --senf: #E8B84B;
+
+  /* Shape — minimal */
+  --r-0: 0;
+  --r-1: 3px;
+  --r-2: 6px;
+
+  /* Haarlinien */
+  --line:      1px solid rgba(22, 18, 12, .15);
+  --line-on:   1px solid rgba(253, 246, 228, .22);
+  --line-hard: 1px solid var(--tinte);
+
+  /* Spacing */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 28px;
+  --s-7: 40px;
+  --s-8: 56px;
+
+  /* Segment-Innenabstand */
+  --seg-x: 20px;
+  --seg-y: 22px;
+
+  /* Zeilenhöhen Display — Boldonse braucht Luft */
+  --lh-xl: 1.14;
+  --lh-lg: 1.16;
+  --lh-md: 1.22;
+
+  /* Motion */
+  --spring:  cubic-bezier(.34, 1.4, .64, 1);
+  --d-fast:  130ms;
+  --d-mid:   240ms;
+
+  /* Typografie */
+  --font-display: 'Boldonse', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+}

@@ -1,0 +1,80 @@
+@import './tokens.css';
+@import 'leaflet/dist/leaflet.css';
+@import 'leaflet.markercluster/dist/MarkerCluster.css';
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+  height: 100dvh;
+}
+
+body {
+  height: 100%;
+  font-family: var(--font-mono);
+  background: var(--creme);
+  color: var(--on-creme);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+/* App-Wrapper — max 430px zentriert wie eine native App */
+#root {
+  height: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  background: var(--creme);
+  position: relative;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+/* Leaflet-Overrides: kein box-shadow, kein Radius */
+.leaflet-container {
+  background: var(--creme-deep);
+  font-family: var(--font-mono);
+}
+
+.leaflet-control-zoom a {
+  border-radius: 0 !important;
+  border: var(--line-hard) !important;
+  font-family: var(--font-mono) !important;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  display: none !important;
+}
+
+/* Cluster-Override — eigenes Styling via .cluster-icon */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background: transparent !important;
+}
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  border-radius: 0 !important;
+}

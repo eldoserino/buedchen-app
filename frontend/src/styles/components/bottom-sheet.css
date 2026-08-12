@@ -1,0 +1,206 @@
+/* Bottom Sheet — Kartenansicht (Büdchen-Vorschau) */
+.bottom-sheet {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  bottom: 66px;
+  z-index: 30;
+  background: var(--rot);
+  color: var(--on-rot);
+  border-top: var(--line-hard);
+  animation: slide-up var(--d-mid) var(--spring) both;
+}
+
+@keyframes slide-up {
+  from { transform: translateX(-50%) translateY(100%); }
+  to   { transform: translateX(-50%) translateY(0); }
+}
+
+.bottom-sheet__inner {
+  padding: var(--seg-y) var(--seg-x);
+}
+
+.bottom-sheet__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: .5875rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  opacity: .72;
+  margin-bottom: var(--s-4);
+}
+
+.bottom-sheet__name {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  line-height: var(--lh-xl);
+  letter-spacing: -.025em;
+  text-transform: uppercase;
+}
+
+.bottom-sheet__info {
+  font-size: .6875rem;
+  opacity: .85;
+  margin-top: var(--s-4);
+  letter-spacing: .06em;
+  line-height: 1.7;
+}
+
+.bottom-sheet__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: var(--s-5);
+}
+
+.bottom-sheet__features {
+  font-size: .625rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  opacity: .8;
+}
+
+.bottom-sheet__btn {
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: .6875rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  padding: 13px 20px;
+  border-radius: var(--r-1);
+  background: var(--creme);
+  color: var(--rot);
+  transition: opacity var(--d-fast);
+  min-height: 44px;
+}
+
+.bottom-sheet__btn:hover {
+  opacity: .85;
+}
+
+/* Filter Panel */
+.filter-sheet {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  bottom: 66px;
+  z-index: 45;
+  background: var(--creme);
+  color: var(--on-creme);
+  border-top: var(--line-hard);
+  max-height: 70vh;
+  overflow-y: auto;
+  animation: slide-up var(--d-mid) var(--spring) both;
+}
+
+.filter-sheet__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--s-5) var(--seg-x);
+  border-bottom: var(--line-hard);
+}
+
+.filter-sheet__title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  line-height: var(--lh-md);
+}
+
+.filter-sheet__reset {
+  border: none;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: .625rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--rot);
+  cursor: pointer;
+  padding: var(--s-2) 0;
+  min-height: 44px;
+}
+
+.filter-section {
+  border-bottom: var(--line);
+  padding: var(--s-5) var(--seg-x);
+}
+
+.filter-section__label {
+  font-size: .5875rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--on-creme-dim);
+  margin-bottom: var(--s-4);
+}
+
+.filter-veedel-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.filter-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--s-3) 0;
+}
+
+.filter-toggle__label {
+  font-size: .75rem;
+  letter-spacing: .06em;
+}
+
+.filter-toggle__btn {
+  width: 44px;
+  height: 26px;
+  border: var(--line-hard);
+  border-radius: var(--r-1);
+  background: transparent;
+  position: relative;
+  cursor: pointer;
+  transition: background var(--d-fast);
+  flex-shrink: 0;
+}
+
+.filter-toggle__btn.on {
+  background: var(--tinte);
+  border-color: var(--tinte);
+}
+
+.filter-toggle__btn::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: var(--on-creme-dim);
+  top: 3px;
+  left: 3px;
+  transition: transform var(--d-fast), background var(--d-fast);
+}
+
+.filter-toggle__btn.on::after {
+  transform: translateX(18px);
+  background: var(--on-tinte);
+}
+
+/* Overlay */
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  background: transparent;
+}

@@ -1,0 +1,115 @@
+.seg {
+  padding: var(--seg-y) var(--seg-x);
+  border-bottom: var(--line-hard);
+  position: relative;
+  cursor: pointer;
+  transition: background var(--d-fast);
+  display: block;
+  text-decoration: none;
+  width: 100%;
+  text-align: left;
+}
+
+/* Farb-Varianten */
+.seg--creme {
+  background: var(--creme);
+  color: var(--on-creme);
+}
+
+.seg--creme:hover {
+  background: var(--creme-deep);
+}
+
+.seg--rot {
+  background: var(--rot);
+  color: var(--on-rot);
+}
+
+.seg--rot:hover {
+  background: var(--rot-deep);
+}
+
+.seg--tinte {
+  background: var(--tinte);
+  color: var(--on-tinte);
+}
+
+.seg--tinte:hover {
+  background: var(--tinte-soft);
+}
+
+/* Kopfzeile */
+.seg__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: .5875rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  opacity: .66;
+  margin-bottom: var(--s-4);
+}
+
+/* Name */
+.seg__name {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  line-height: var(--lh-lg);
+  letter-spacing: -.02em;
+  text-transform: uppercase;
+}
+
+.seg__name--lg {
+  font-size: 1.9rem;
+  line-height: var(--lh-xl);
+  letter-spacing: -.025em;
+}
+
+/* Fußzeile */
+.seg__bot {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  margin-top: var(--s-5);
+  font-size: .6875rem;
+  letter-spacing: .06em;
+}
+
+.seg__rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.seg__feat {
+  margin-left: auto;
+  opacity: .8;
+  font-size: .625rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+/* Fact-Segment (illustrativ, nicht klickbar) */
+.seg--fact {
+  background: var(--creme-deep);
+  color: var(--on-creme);
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+
+.seg--fact:hover {
+  background: var(--creme-deep);
+}
+
+.seg__fact-text {
+  font-size: .6875rem;
+  line-height: 1.75;
+  letter-spacing: .05em;
+  max-width: 22ch;
+}

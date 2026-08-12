@@ -1,0 +1,11 @@
+{
+  "name": "buedchen-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Import-Script für Google Places → MariaDB",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "mysql2": "^3.0.0"
+  }
+}

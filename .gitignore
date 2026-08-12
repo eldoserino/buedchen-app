@@ -1,0 +1,23 @@
+# Dependencies
+frontend/node_modules/
+backend/vendor/
+scripts/node_modules/
+
+# Build output
+frontend/dist/
+
+# Environment & credentials
+.env
+backend/config.php
+
+# Photos (befüllt via Import-Script, nicht in Git)
+frontend/public/photos/
+
+# PWA service worker (generiert)
+frontend/public/sw.js
+frontend/public/workbox-*.js
+frontend/public/manifest.webmanifest
+
+# OS
+.DS_Store
+Thumbs.db

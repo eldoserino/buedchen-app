@@ -1,0 +1,22 @@
+.status-strip {
+  flex-shrink: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px var(--seg-x);
+  height: 40px;
+  background: var(--creme);
+  border-bottom: var(--line-hard);
+  font-family: var(--font-mono);
+  font-size: .625rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--on-creme-dim);
+  flex-shrink: 0;
+}
+
+.status-strip__live {
+  color: var(--rot);
+}

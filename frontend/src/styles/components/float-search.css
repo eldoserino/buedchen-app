@@ -1,0 +1,96 @@
+.float-search {
+  position: fixed;
+  top: 52px;
+  left: var(--s-3);
+  right: var(--s-3);
+  z-index: 40;
+  background: var(--creme);
+  border: var(--line-hard);
+  border-radius: var(--r-1);
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding-left: 14px;
+  height: 50px;
+}
+
+.float-search__icon {
+  color: var(--rot);
+  display: flex;
+  flex-shrink: 0;
+}
+
+.float-search__input {
+  flex: 1 1 auto;
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--on-creme);
+  outline: none;
+  min-width: 0;
+}
+
+.float-search__input::placeholder {
+  color: var(--on-creme-dim);
+}
+
+.float-search__filter-btn {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border: none;
+  background: var(--rot);
+  color: var(--on-rot);
+  display: grid;
+  place-items: center;
+  position: relative;
+  transition: background var(--d-fast);
+  border-radius: 0;
+}
+
+.float-search__filter-btn:hover {
+  background: var(--rot-deep);
+}
+
+.float-search__badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 15px;
+  height: 15px;
+  background: var(--senf);
+  color: var(--tinte);
+  font-size: .5625rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  padding: 0 3px;
+  border-radius: 0;
+  line-height: 1;
+}
+
+/* Zurück-Button auf Detailseite */
+.float-back {
+  position: fixed;
+  top: 52px;
+  left: var(--s-3);
+  z-index: 40;
+  width: 46px;
+  height: 46px;
+  background: var(--creme);
+  border: var(--line-hard);
+  border-radius: var(--r-1);
+  color: var(--rot);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background var(--d-fast);
+}
+
+.float-back:hover {
+  background: var(--creme-deep);
+}
