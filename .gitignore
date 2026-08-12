@@ -10,9 +10,6 @@ frontend/dist/
 .env
 backend/config.php
 
-# Photos (befüllt via Import-Script, nicht in Git)
-frontend/public/photos/
-
 # PWA service worker (generiert)
 frontend/public/sw.js
 frontend/public/workbox-*.js

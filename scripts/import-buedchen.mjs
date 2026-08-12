@@ -18,8 +18,6 @@ const DB = {
   password: process.env.DB_PASS     || '',
 }
 
-const PHOTO_DIR = new URL('../frontend/public/photos/', import.meta.url).pathname
-
 const PLZ_VEEDEL = {
   '50667': 'Altstadt-Nord',     '50668': 'Neustadt-Nord',
   '50670': 'Neustadt-Nord',     '50672': 'Neustadt-Süd',
@@ -88,17 +86,6 @@ async function placeDetails(id) {
   return res.json()
 }
 
-async function downloadPhoto(photoName, destPath) {
-  const url = `${PLACES_BASE}/${photoName}/media?maxHeightPx=800&key=${API_KEY}`
-  const res  = await fetch(url)
-  if (!res.ok) return null
-
-  const fs   = await import('fs/promises')
-  const buf  = Buffer.from(await res.arrayBuffer())
-  await fs.writeFile(destPath, buf)
-  return destPath
-}
-
 function extractPlz(address) {
   const m = address?.match(/\b5\d{4}\b/)
   return m ? m[0] : null
@@ -120,9 +107,6 @@ async function run() {
     console.error('GOOGLE_PLACES_API_KEY fehlt in .env')
     process.exit(1)
   }
-
-  const { mkdirSync } = await import('fs')
-  try { mkdirSync(PHOTO_DIR, { recursive: true }) } catch (_) {}
 
   const db = await mysql.createConnection(DB)
   console.log('DB verbunden.')
@@ -169,23 +153,14 @@ async function run() {
 
     const id = `gp-${place.id}`
 
-    // Foto herunterladen
-    let photoPath = null
-    if (detail.photos?.length > 0) {
-      const dest = `${PHOTO_DIR}${id}.jpg`
-      photoPath  = await downloadPhoto(detail.photos[0].name, dest)
-        .then(() => `/photos/${id}.jpg`)
-        .catch(() => null)
-    }
-
     const openingHours = buildOpeningHours(detail)
 
     await db.execute(`
       INSERT INTO buedchen
         (id, name, address, veedel, postcode, lat, lng,
          google_place_id, google_rating, google_review_count,
-         opening_hours, phone, website, photo_path, last_synced_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+         opening_hours, phone, website, last_synced_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
       ON DUPLICATE KEY UPDATE
         name=VALUES(name), address=VALUES(address),
         veedel=VALUES(veedel), postcode=VALUES(postcode),
@@ -193,7 +168,6 @@ async function run() {
         google_review_count=VALUES(google_review_count),
         opening_hours=VALUES(opening_hours),
         phone=VALUES(phone), website=VALUES(website),
-        photo_path=COALESCE(VALUES(photo_path), photo_path),
         last_synced_at=NOW()
     `, [
       id, name, address, veedel, plz,
@@ -203,7 +177,6 @@ async function run() {
       openingHours,
       detail.nationalPhoneNumber ?? null,
       detail.websiteUri ?? null,
-      photoPath,
     ])
 
     imported++
