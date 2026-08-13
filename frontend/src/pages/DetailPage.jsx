@@ -4,10 +4,20 @@ import { Clock, MapPin, Note, Star } from '@phosphor-icons/react'
 import StatusStrip from '../components/StatusStrip'
 import FloatBack from '../components/FloatBack'
 import Checker from '../components/Checker'
-import StangeDoodle from '../illustrations/StangeDoodle'
 
 const TAG_COLORS = ['var(--senf)', 'var(--pink)', 'var(--blau)']
 const TAG_FG     = ['var(--tinte)', 'var(--tinte)', '#fff']
+
+const TYPE_LABEL = {
+  uferbüdchen:    'Uferbüdchen',
+  platzbüdchen:   'Platzbüdchen',
+  parkbüdchen:    'Parkbüdchen',
+  straßenbüdchen: 'Büdchen',
+}
+
+function typeLabel(type) {
+  return TYPE_LABEL[type] ?? 'Büdchen'
+}
 
 export default function DetailPage() {
   const { id }         = useParams()
@@ -57,7 +67,7 @@ export default function DetailPage() {
         <div style={{ background: 'var(--rot)', color: 'var(--on-rot)', padding: '112px var(--seg-x) 0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.5875rem', fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', opacity: .72, marginBottom: 'var(--s-5)' }}>
             <span>Veedel · {veedel}</span>
-            {b.created_at && <span>Büdchen</span>}
+            <span>{typeLabel(b.buedchen_type)}</span>
           </div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', lineHeight: 'var(--lh-xl)', letterSpacing: '-.03em', textTransform: 'uppercase' }}>
             {b.name}
@@ -90,6 +100,22 @@ export default function DetailPage() {
             </div>
           ))}
         </div>
+
+        {/* KI-Summary */}
+        {b.ai_summary && (
+          <div style={{
+            padding: 'var(--s-6) var(--seg-x)',
+            borderBottom: 'var(--line-hard)',
+            background: 'var(--creme-deep)',
+          }}>
+            <div style={{ fontSize: '.5875rem', fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--on-creme-dim)', marginBottom: 'var(--s-3)' }}>
+              Charakter
+            </div>
+            <p style={{ fontSize: '.8125rem', lineHeight: 1.75, letterSpacing: '.02em', margin: 0 }}>
+              {b.ai_summary}
+            </p>
+          </div>
+        )}
 
         {/* Info-Segment */}
         <div style={{ borderBottom: 'var(--line-hard)' }}>
@@ -162,21 +188,30 @@ export default function DetailPage() {
           </div>
         )}
 
-        {/* Phase-2-Platzhalter */}
-        <div style={{
-          padding: 'var(--s-7) var(--seg-x)',
-          textAlign: 'center',
-          borderBottom: 'var(--line-hard)',
-          background: 'var(--creme-deep)',
-        }}>
-          <StangeDoodle size={42} color="var(--on-creme-dim)" />
-          <div style={{ marginTop: 14, fontFamily: 'var(--font-display)', fontSize: '.9375rem', lineHeight: 'var(--lh-md)', textTransform: 'uppercase', color: 'var(--on-creme-dim)' }}>
-            Biersortiment
+        {/* KI-Tags */}
+        {b.character_tags?.length > 0 && (
+          <div style={{ padding: 'var(--s-5) var(--seg-x)', borderBottom: 'var(--line-hard)' }}>
+            <div style={{ fontSize: '.5875rem', fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--on-creme-dim)', marginBottom: 'var(--s-4)' }}>
+              Vibe
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)' }}>
+              {b.character_tags.map((tag, i) => (
+                <span key={tag} style={{
+                  fontSize: '.625rem',
+                  fontWeight: 700,
+                  letterSpacing: '.12em',
+                  textTransform: 'uppercase',
+                  padding: '7px 11px',
+                  borderRadius: 'var(--r-1)',
+                  background: TAG_COLORS[i % TAG_COLORS.length],
+                  color: TAG_FG[i % TAG_FG.length],
+                }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
           </div>
-          <div style={{ fontSize: '.625rem', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--on-creme-dim)', opacity: .75, marginTop: 'var(--s-3)' }}>
-            Phase 2 · Untappd
-          </div>
-        </div>
+        )}
 
       </div>
     </>
