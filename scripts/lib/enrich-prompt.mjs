@@ -36,20 +36,35 @@ AUFGABE:
 2. Schreibe einen deutschen Satz (max. 20 Wörter), der beschreibt
    was dieses Büdchen besonders macht — konkret, nicht generisch.
    Beginne nicht mit dem Namen des Büdchens.
-3. Confidence-Score 0.0–1.0:
-   1.0 = viele aussagekräftige Bewertungen
-   0.5 = wenige oder oberflächliche Bewertungen
-   0.0 = kaum verwertbare Daten
 
 ANTWORT (exakt dieses Format):
 {
   "tags": ["tag1", "tag2"],
-  "summary": "Ein Satz über das Büdchen.",
-  "confidence": 0.85
+  "summary": "Ein Satz über das Büdchen."
 }`.trim();
 }
 
-export function validateLLMOutput(raw) {
+/**
+ * Berechnet Confidence programmatisch anhand der Review-Daten.
+ * Verlässlicher als LLM-Selbstbewertung.
+ */
+export function calcConfidence(reviews) {
+  if (!reviews || reviews.length === 0) return 0.05;
+  const deReviews = reviews.filter(r => {
+    const text = r.text || '';
+    // Einfache Heuristik: enthält typische deutsche Wörter
+    return /\b(und|ist|ein|auch|sehr|hat|mit|für|das|ich|nicht|man|noch|wie|war|die|aber|dann|mehr)\b/i.test(text);
+  });
+  const count = reviews.length;
+  const deFraction = deReviews.length / count;
+  if (count >= 8 && deFraction >= 0.7) return 0.92;
+  if (count >= 5 && deFraction >= 0.5) return 0.78;
+  if (count >= 3) return 0.62;
+  if (count >= 1) return 0.45;
+  return 0.05;
+}
+
+export function validateLLMOutput(raw, reviews = []) {
   try {
     const text = raw.trim()
       .replace(/^```(?:json)?\s*/i, '')
@@ -58,7 +73,7 @@ export function validateLLMOutput(raw) {
     return {
       tags:       (parsed.tags || []).filter(t => ALLOWED_TAGS.has(t)).slice(0, 5),
       summary:    String(parsed.summary || '').slice(0, 200).trim(),
-      confidence: Math.min(1, Math.max(0, Number(parsed.confidence) || 0)),
+      confidence: calcConfidence(reviews),
     };
   } catch {
     return null;

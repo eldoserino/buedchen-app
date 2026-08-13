@@ -129,7 +129,7 @@ async function main() {
       }
 
       const rawLLM = await callLLM(prompt);
-      const result = validateLLMOutput(rawLLM);
+      const result = validateLLMOutput(rawLLM, reviews);
 
       if (!result) {
         await conn.query(

@@ -57,7 +57,7 @@ async function callLLM(prompt) {
     model:           OLLAMA_MODEL,
     messages:        [{ role: 'user', content: prompt }],
     response_format: { type: 'json_object' },
-    temperature:     0.1,
+    temperature:     0.3,
   });
   return response.choices[0]?.message?.content || '';
 }
@@ -99,7 +99,7 @@ async function main() {
       // Schritt 4: LLM-Enrichment
       const prompt  = buildEnrichPrompt(b, reviews);
       const rawLLM  = await callLLM(prompt);
-      const result  = validateLLMOutput(rawLLM);
+      const result  = validateLLMOutput(rawLLM, reviews);
 
       if (!result) {
         await conn.query(
