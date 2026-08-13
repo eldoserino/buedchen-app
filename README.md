@@ -93,6 +93,65 @@ scripts/    Büdchen-Import (Google Places API)
 nginx/      nginx vhost config
 ```
 
+## Phase 2: Datentiefe (Enrichment)
+
+### Ausführungs-Reihenfolge
+
+```bash
+# 1. DB migrieren (auf VPS)
+mariadb -u root -p buedchen < backend/database/migrate-phase2.sql
+
+# 2. Script-Dependencies installieren
+cd scripts && npm install
+
+# 3. POIs seeden (OSM + kuratierte Liste)
+node scripts/seed-pois.mjs
+
+# 4. Editorial-Quellen scrapen
+node scripts/scrape-editorial.mjs
+
+# 5. Bulk-Enrichment (Windows-PC via Invoke-TrackedTask)
+# SSH-Tunnel vorher starten: ssh -L 13306:127.0.0.1:3306 -N hetzner
+# DB_PORT=13306 in .env setzen für lokalen Tunnel
+Invoke-TrackedTask -Name "buedchen-enrich" -Command "node scripts/bulk-enrich.mjs"
+
+# 6. Review-Queue prüfen
+curl -u dominik:PASSWORT https://buedchen.slightlymad.de/api/review-queue
+
+# 7. enrich-buedchen.mjs testen (VPS-Script, noch nicht als Cron aktiviert)
+node scripts/enrich-buedchen.mjs --dry-run
+```
+
+### Umgebungsvariablen (Phase 2)
+
+Zusätzlich zu Phase 1 in `.env` eintragen:
+
+```
+OPENROUTER_API_KEY=      # für VPS-Cron-Script
+OLLAMA_BASE_URL=http://localhost:11434/v1
+CONFIDENCE_THRESHOLD=0.65
+REVIEW_QUEUE_USER=dominik
+REVIEW_QUEUE_PASS=       # sicheres Passwort wählen
+```
+
+Auf dem VPS: `REVIEW_QUEUE_USER` und `REVIEW_QUEUE_PASS` als Umgebungsvariablen in der
+PHP-FPM-Konfiguration oder `nginx`-Proxy setzen.
+
+### VPS-Cron (DEAKTIVIERT — erst nach Validierung aktivieren)
+
+```
+# DEAKTIVIERT — erst nach Validierung des Bulk-Enrichments aktivieren
+# 30 3 * * 1 node /var/www/buedchen/scripts/enrich-buedchen.mjs \
+#   >> /var/log/buedchen-enrich.log 2>&1
+```
+
+Den Cron aktivieren wenn:
+- Bulk-Enrichment für alle bestehenden Büdchen erfolgreich durchgelaufen ist
+- Review-Queue auf unter 10% der Büdchen-Zahl gesunken ist
+- `enrich-buedchen.mjs --dry-run` fehlerfrei auf dem VPS läuft
+
+---
+
 ## Wöchentlicher Import (Cron auf VPS)
 
 ```
