@@ -9,4 +9,8 @@ return [
         'pass'    => 'DEIN_PASSWORT',
         'charset' => 'utf8mb4',
     ],
+    'review_queue' => [
+        'user' => 'dominik',
+        'pass' => 'SICHERES_PASSWORT_EINTRAGEN',
+    ],
 ];
