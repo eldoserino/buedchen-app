@@ -4,7 +4,7 @@ export const ALLOWED_TAGS = new Set([
   'kultbüdchen', 'geheimtipp', 'stammgäste', 'nachtfalke', 'frühaufsteher',
   'kaffee-institution', 'szene', 'familienfreundlich', 'hunde-willkommen',
   'fahrradfreundlich', 'denkmalgebäude', 'älteste-büdchen', 'seit-jahrzehnten',
-  'blumengeschmückt', 'mit-aussicht', 'rheinblick', 'kiez-treff', 'partyort',
+  'blumengeschmückt', 'mit-aussicht', 'rheinblick', 'veedel-treff', 'partyort',
 ]);
 
 export function buildEnrichPrompt(buedchen, reviews) {
@@ -45,7 +45,7 @@ seit-jahrzehnten → Jahrzehnte in Betrieb, generationsübergreifend
 blumengeschmückt → Blumenschmuck, Bepflanzung, schöne Außengestaltung
 mit-aussicht  → Schöner Blick, erhöhte Lage, Panorama
 rheinblick    → Rhein sichtbar oder Nähe explizit erwähnt
-kiez-treff    → Nachbarschaftstreffpunkt, Dorfplatz-Atmosphäre, Veedel-Gemeinschaft
+veedel-treff    → Nachbarschaftstreffpunkt, Dorfplatz-Atmosphäre, Veedel-Gemeinschaft
 partyort      → Party, Feiern, Eventlocation, Nachtleben
 
 Falls kein Tag wirklich passt: leeres Array [].
