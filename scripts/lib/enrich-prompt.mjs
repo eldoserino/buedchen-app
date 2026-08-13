@@ -1,9 +1,10 @@
+// Geo-Typen (platzbüdchen/parkbüdchen/uferbüdchen/straßenbüdchen) werden
+// durch geo-enrich.mjs gesetzt — NICHT als LLM-Tags verwenden.
 export const ALLOWED_TAGS = new Set([
-  'kultbüdchen', 'geheimtipp', 'stammgäste', 'platzbüdchen', 'parkbüdchen',
-  'uferbüdchen', 'nachtfalke', 'frühaufsteher', 'kaffee-institution', 'szene',
-  'familienfreundlich', 'hunde-willkommen', 'fahrradfreundlich', 'denkmalgebäude',
-  'älteste-büdchen', 'seit-jahrzehnten', 'blumengeschmückt', 'mit-aussicht',
-  'rheinblick', 'kiez-treff', 'partyort',
+  'kultbüdchen', 'geheimtipp', 'stammgäste', 'nachtfalke', 'frühaufsteher',
+  'kaffee-institution', 'szene', 'familienfreundlich', 'hunde-willkommen',
+  'fahrradfreundlich', 'denkmalgebäude', 'älteste-büdchen', 'seit-jahrzehnten',
+  'blumengeschmückt', 'mit-aussicht', 'rheinblick', 'kiez-treff', 'partyort',
 ]);
 
 export function buildEnrichPrompt(buedchen, reviews) {
@@ -11,44 +12,76 @@ export function buildEnrichPrompt(buedchen, reviews) {
     ? reviews.map((r, i) => `[${i + 1}] "${r.text}" (${r.rating}★)`).join('\n')
     : '(keine Bewertungen vorhanden)';
 
-  return `Du analysierst ein Kölner Büdchen anhand seiner Google-Bewertungen.
+  return `Du analysierst einen Kölner Kiosk anhand seiner Google-Bewertungen.
 Antworte NUR mit einem validen JSON-Objekt. Kein Text davor oder danach.
 Kein Markdown, keine Code-Blöcke.
 
-BÜDCHEN:
+KIOSK:
 Name: ${buedchen.name}
 Adresse: ${buedchen.address || '(unbekannt)'}
 Veedel: ${buedchen.veedel || '(unbekannt)'}
 Google-Rating: ${buedchen.google_rating ?? 'n/a'} (${buedchen.google_review_count ?? 0} Bewertungen)
 
-BEWERTUNGEN (max. 10 aktuellste):
+BEWERTUNGEN (egal ob Deutsch oder Englisch, max. 10):
 ${reviewText}
 
-ERLAUBTE TAGS — exakt aus dieser Liste, 2–4 auswählen:
-geheimtipp, stammgäste, nachtfalke, frühaufsteher, kaffee-institution, szene,
-familienfreundlich, hunde-willkommen, fahrradfreundlich, denkmalgebäude,
-älteste-büdchen, seit-jahrzehnten, blumengeschmückt, mit-aussicht,
-rheinblick, kiez-treff, partyort, kultbüdchen
+── TAGS ──────────────────────────────────────────────────────────────
+Wähle 1–3 Tags. Nur aus dieser Liste, nur wenn durch Bewertungen belegt:
 
-TAG-REGELN (wichtig!):
-- kultbüdchen: NUR wenn Bewertungen ausdrücklich Kultstatus, jahrzehntelange Tradition oder
-  besondere lokale Bekanntheit erwähnen. NICHT als Standardtag vergeben.
-- stammgäste: wenn Bewertungen regelmäßige Stammkunden oder familiäre Atmosphäre erwähnen
-- geheimtipp: wenn das Büdchen trotz gutem Rating kaum bekannt wirkt oder explizit so beschrieben wird
-- Wähle nur Tags die durch die Bewertungen konkret belegt sind
+kultbüdchen   → Nur wenn Bewertungen "Institution", "seit Jahrzehnten", "Kult", "beste in Köln"
+                oder ähnlich explizit formulieren. Nicht als Default-Tag.
+stammgäste    → Regelmäßige Besucher, Stammkundschaft, "kenn ich schon ewig", "komme täglich"
+geheimtipp    → Unbekannt trotz Qualität, "kaum jemand weiß davon", kleines Versteck
+nachtfalke    → Auffällig lange geöffnet, Nachtbetrieb, 24h, sehr late hours
+frühaufsteher → Öffnet früh, Frühstücksangebot, morgens erste Anlaufstelle
+kaffee-institution → Kaffee ist Hauptthema der Bewertungen, Espresso/Cappuccino, Kaffeepause
+szene         → Treffpunkt einer bestimmten Szene, Party-Umfeld, besonderer Kiez-Charakter
+familienfreundlich → Bewertungen erwähnen Kinder, Familie, kinderfreundlich
+hunde-willkommen → Hunde explizit willkommen oder erwähnt
+fahrradfreundlich → Fahrradroute, Radfahrer, Abstellmöglichkeit erwähnt
+denkmalgebäude → Historisches Gebäude, denkmalgeschützt, altes Haus
+älteste-büdchen → "schon immer da", sehr lange Geschichte erwähnt
+seit-jahrzehnten → Jahrzehnte in Betrieb, generationsübergreifend
+blumengeschmückt → Blumenschmuck, Bepflanzung, schöne Außengestaltung
+mit-aussicht  → Schöner Blick, erhöhte Lage, Panorama
+rheinblick    → Rhein sichtbar oder Nähe explizit erwähnt
+kiez-treff    → Nachbarschaftstreffpunkt, Dorfplatz-Atmosphäre, Veedel-Gemeinschaft
+partyort      → Party, Feiern, Eventlocation, Nachtleben
 
-AUFGABE:
-1. Wähle 2–4 Tags aus der Liste (kultbüdchen nur wenn eindeutig belegt)
-2. Schreibe einen prägnanten deutschen Satz (max. 18 Wörter):
-   - Konkret: nenne was das Büdchen tatsächlich auszeichnet (Lage, Besonderheit, Atmosphäre)
-   - NICHT generisch: vermeide "beliebter Treffpunkt", "nettes Büdchen", "guter Service"
-   - Nutze Details aus den Bewertungen wenn vorhanden
-   - Beginne nicht mit dem Namen des Büdchens
+Falls kein Tag wirklich passt: leeres Array [].
 
-ANTWORT (exakt dieses Format):
+── SUMMARY ───────────────────────────────────────────────────────────
+Schreibe EINEN deutschen Satz (max. 18 Wörter).
+
+ZIEL: Was macht DIESEN Kiosk von anderen unterscheidbar?
+Suche das spezifischste Detail aus den Bewertungen:
+  - Besonderes Produkt: "immer eiskaltes Bier", "Lavash und Basturma", "internationale Snacks"
+  - Besondere Öffnungszeiten: "auch sonntags um 7", "bis weit nach Mitternacht"
+  - Besonderer Ort: "direkt am Rheinufer", "unter dem Bahnbogen"
+  - Besondere Geschichte: "seit 40 Jahren im Veedel"
+  - Besondere Atmosphäre die KONKRET beschrieben wird
+
+VERBOTEN (zu generisch, gilt für jeden Kiosk):
+  ✗ "freundlicher Service" / "freundliches Personal"
+  ✗ "faire Preise" / "gute Preise"
+  ✗ "großes Sortiment" / "breite Auswahl"
+  ✗ "beliebter Treffpunkt" / "nettes Büdchen"
+  ✗ "empfehlenswert"
+
+BEISPIELE guter Summarys:
+  ✓ "Das einzige 24-Stunden-Büdchen in Bickendorf mit riesiger Shisha-Abteilung."
+  ✓ "Internationale Snacks rund um die Uhr — Lebensretter auf der Radtour."
+  ✓ "Die Geschwister hier kennt das ganze Nippes, Stammgäste seit Jahrzehnten."
+  ✓ "Täglich frischer Cappuccino für 1,50 € — der günstigste im Veedel."
+  ✓ "Direkt an der Endhaltestelle, für Rodenkirchen die letzte Einkaufsstation."
+
+Falls die Bewertungen zu dünn sind für ein spezifisches Detail:
+  → Schreibe was der Kiosk hauptsächlich anbietet, möglichst konkret.
+
+── ANTWORT ───────────────────────────────────────────────────────────
 {
-  "tags": ["tag1", "tag2"],
-  "summary": "Ein konkreter Satz über das Büdchen."
+  "tags": ["tag1"],
+  "summary": "Ein konkreter Satz."
 }`.trim();
 }
 
