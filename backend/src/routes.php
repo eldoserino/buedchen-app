@@ -79,15 +79,19 @@ $app->get('/api/buedchen/{id}', function (Request $request, Response $response, 
         return jsonResponse($response, ['error' => 'not found'], 404);
     }
 
-    $row['tags']            = $row['tags']            ? json_decode($row['tags'])            : [];
-    $row['editorial_badges'] = $row['editorial_badges'] ? json_decode($row['editorial_badges']) : [];
-    $row['opening_hours']   = $row['opening_hours']   ? json_decode($row['opening_hours'])   : null;
-    $row['lat']             = (float) $row['lat'];
-    $row['lng']             = (float) $row['lng'];
-    $row['google_rating']   = $row['google_rating'] !== null ? (float) $row['google_rating'] : null;
-    $row['google_review_count'] = $row['google_review_count'] !== null ? (int) $row['google_review_count'] : null;
-    $row['feature_seating'] = (bool) $row['feature_seating'];
-    $row['feature_coffee']  = (bool) $row['feature_coffee'];
+    $row['tags']               = $row['tags']               ? json_decode($row['tags'])               : [];
+    $row['editorial_badges']   = $row['editorial_badges']   ? json_decode($row['editorial_badges'])   : [];
+    $row['opening_hours']      = $row['opening_hours']      ? json_decode($row['opening_hours'])      : null;
+    $row['character_tags']     = $row['character_tags']     ? json_decode($row['character_tags'])     : [];
+    $row['poi_distances']      = $row['poi_distances']      ? json_decode($row['poi_distances'], true): null;
+    $row['editorial_sources']  = $row['editorial_sources']  ? json_decode($row['editorial_sources'])  : [];
+    $row['lat']                = (float) $row['lat'];
+    $row['lng']                = (float) $row['lng'];
+    $row['google_rating']      = $row['google_rating']      !== null ? (float) $row['google_rating']      : null;
+    $row['google_review_count']= $row['google_review_count']!== null ? (int)   $row['google_review_count'] : null;
+    $row['ai_confidence']      = $row['ai_confidence']      !== null ? (float) $row['ai_confidence']      : null;
+    $row['feature_seating']    = (bool) $row['feature_seating'];
+    $row['feature_coffee']     = (bool) $row['feature_coffee'];
 
     return jsonResponse($response, $row);
 });
