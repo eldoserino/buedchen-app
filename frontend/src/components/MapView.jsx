@@ -4,7 +4,26 @@ import L from 'leaflet'
 import 'leaflet.markercluster'
 import '../styles/components/map.css'
 
-const KOELN = [50.938, 6.960]
+const KOELN   = [50.938, 6.960]
+const MAP_KEY = 'buedchen_mapstate'
+
+function readMapState() {
+  try { return JSON.parse(sessionStorage.getItem(MAP_KEY)) } catch { return null }
+}
+
+function MapStateTracker() {
+  const map = useMap()
+  useEffect(() => {
+    const save = () => {
+      const c = map.getCenter()
+      sessionStorage.setItem(MAP_KEY, JSON.stringify({ lat: c.lat, lng: c.lng, zoom: map.getZoom() }))
+    }
+    map.on('moveend', save)
+    map.on('zoomend', save)
+    return () => { map.off('moveend', save); map.off('zoomend', save) }
+  }, [map])
+  return null
+}
 
 function createPinIcon(isEditorial = false) {
   const bgColor = isEditorial ? 'var(--tinte)' : 'var(--rot)'
@@ -63,11 +82,15 @@ function ClusterLayer({ buedchen, onSelect }) {
 }
 
 export default function MapView({ buedchen, onSelect }) {
+  const saved  = readMapState()
+  const center = saved ? [saved.lat, saved.lng] : KOELN
+  const zoom   = saved ? saved.zoom : 13
+
   return (
     <div className="map-wrapper">
       <MapContainer
-        center={KOELN}
-        zoom={13}
+        center={center}
+        zoom={zoom}
         className="map-container"
         zoomControl
       >
@@ -77,6 +100,7 @@ export default function MapView({ buedchen, onSelect }) {
           subdomains="abcd"
           maxZoom={20}
         />
+        <MapStateTracker />
         <ClusterLayer buedchen={buedchen} onSelect={onSelect} />
       </MapContainer>
     </div>

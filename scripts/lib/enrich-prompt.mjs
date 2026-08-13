@@ -24,23 +24,31 @@ Google-Rating: ${buedchen.google_rating ?? 'n/a'} (${buedchen.google_review_coun
 BEWERTUNGEN (max. 10 aktuellste):
 ${reviewText}
 
-ERLAUBTE TAGS — nur aus dieser Liste, 2–5 auswählen:
-kultbüdchen, geheimtipp, stammgäste, platzbüdchen, parkbüdchen,
-uferbüdchen, nachtfalke, frühaufsteher, kaffee-institution, szene,
+ERLAUBTE TAGS — exakt aus dieser Liste, 2–4 auswählen:
+geheimtipp, stammgäste, nachtfalke, frühaufsteher, kaffee-institution, szene,
 familienfreundlich, hunde-willkommen, fahrradfreundlich, denkmalgebäude,
 älteste-büdchen, seit-jahrzehnten, blumengeschmückt, mit-aussicht,
-rheinblick, kiez-treff, partyort
+rheinblick, kiez-treff, partyort, kultbüdchen
+
+TAG-REGELN (wichtig!):
+- kultbüdchen: NUR wenn Bewertungen ausdrücklich Kultstatus, jahrzehntelange Tradition oder
+  besondere lokale Bekanntheit erwähnen. NICHT als Standardtag vergeben.
+- stammgäste: wenn Bewertungen regelmäßige Stammkunden oder familiäre Atmosphäre erwähnen
+- geheimtipp: wenn das Büdchen trotz gutem Rating kaum bekannt wirkt oder explizit so beschrieben wird
+- Wähle nur Tags die durch die Bewertungen konkret belegt sind
 
 AUFGABE:
-1. Wähle 2–5 passende Tags aus der Liste oben
-2. Schreibe einen deutschen Satz (max. 20 Wörter), der beschreibt
-   was dieses Büdchen besonders macht — konkret, nicht generisch.
-   Beginne nicht mit dem Namen des Büdchens.
+1. Wähle 2–4 Tags aus der Liste (kultbüdchen nur wenn eindeutig belegt)
+2. Schreibe einen prägnanten deutschen Satz (max. 18 Wörter):
+   - Konkret: nenne was das Büdchen tatsächlich auszeichnet (Lage, Besonderheit, Atmosphäre)
+   - NICHT generisch: vermeide "beliebter Treffpunkt", "nettes Büdchen", "guter Service"
+   - Nutze Details aus den Bewertungen wenn vorhanden
+   - Beginne nicht mit dem Namen des Büdchens
 
 ANTWORT (exakt dieses Format):
 {
   "tags": ["tag1", "tag2"],
-  "summary": "Ein Satz über das Büdchen."
+  "summary": "Ein konkreter Satz über das Büdchen."
 }`.trim();
 }
 
