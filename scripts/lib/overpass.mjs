@@ -1,7 +1,7 @@
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
 // Vereinfachte Kölner Rhein-Mittellinie (WGS84, Nord → Süd)
-const RHEIN_POLYLINE = [
+export const RHEIN_POLYLINE = [
   [51.0400, 6.9850],
   [51.0150, 6.9820],
   [50.9960, 6.9740],
@@ -93,9 +93,10 @@ out center;
  */
 export function getBuedchenType(distances) {
   if (!distances) return 'straßenbüdchen';
-  if (distances.nearest_plaza_m !== null && distances.nearest_plaza_m < 100) return 'platzbüdchen';
-  if (distances.nearest_park_m  !== null && distances.nearest_park_m  < 80)  return 'parkbüdchen';
-  if (distances.rhein_m         !== null && distances.rhein_m          < 300) return 'uferbüdchen';
+  // Polyline-Distanz zum Rheinzentrum; West-Ufer ist ~400m vom Zentrum entfernt
+  if (distances.rhein_m         !== null && distances.rhein_m          < 500) return 'uferbüdchen';
+  if (distances.nearest_plaza_m !== null && distances.nearest_plaza_m < 150) return 'platzbüdchen';
+  if (distances.nearest_park_m  !== null && distances.nearest_park_m  < 120) return 'parkbüdchen';
   return 'straßenbüdchen';
 }
 
