@@ -15,8 +15,18 @@ const TYPE_LABEL = {
   straßenbüdchen: 'Büdchen',
 }
 
+// Geo-Typen werden im Hero angezeigt — aus Vibe-Tags rausfiltern
+const GEO_TAGS = new Set(['platzbüdchen', 'parkbüdchen', 'uferbüdchen', 'straßenbüdchen'])
+
 function typeLabel(type) {
   return TYPE_LABEL[type] ?? 'Büdchen'
+}
+
+function visibleCharacterTags(tags = [], buedchenType) {
+  const filtered = tags.filter(t => !GEO_TAGS.has(t))
+  // kultbüdchen nur zeigen wenn keine anderen spezifischen Tags vorhanden
+  const specific = filtered.filter(t => t !== 'kultbüdchen')
+  return specific.length > 0 ? specific : filtered
 }
 
 export default function DetailPage() {
@@ -189,13 +199,15 @@ export default function DetailPage() {
         )}
 
         {/* KI-Tags */}
-        {b.character_tags?.length > 0 && (
+        {(() => {
+          const tags = visibleCharacterTags(b.character_tags, b.buedchen_type)
+          return tags.length > 0 && (
           <div style={{ padding: 'var(--s-5) var(--seg-x)', borderBottom: 'var(--line-hard)' }}>
             <div style={{ fontSize: '.5875rem', fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--on-creme-dim)', marginBottom: 'var(--s-4)' }}>
               Vibe
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)' }}>
-              {b.character_tags.map((tag, i) => (
+              {tags.map((tag, i) => (
                 <span key={tag} style={{
                   fontSize: '.625rem',
                   fontWeight: 700,
@@ -211,7 +223,7 @@ export default function DetailPage() {
               ))}
             </div>
           </div>
-        )}
+        )})()}
 
       </div>
     </>
