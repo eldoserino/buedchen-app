@@ -14,7 +14,6 @@
 import 'dotenv/config';
 import OpenAI from 'openai';
 import db from './lib/db.mjs';
-import { getPoiDistances, getBuedchenType } from './lib/overpass.mjs';
 import { buildEnrichPrompt, validateLLMOutput } from './lib/enrich-prompt.mjs';
 
 const OLLAMA_BASE_URL       = process.env.OLLAMA_BASE_URL  || 'http://localhost:11434/v1';
@@ -70,7 +69,7 @@ async function main() {
   const conn = await db.getConnection();
 
   const [buedchenList] = await conn.query(
-    'SELECT id, name, address, veedel, lat, lng, google_place_id, google_rating, google_review_count FROM buedchen WHERE enriched_at IS NULL ORDER BY google_review_count DESC'
+    'SELECT id, name, address, veedel, lat, lng, google_place_id, google_rating, google_review_count, buedchen_type FROM buedchen WHERE enriched_at IS NULL ORDER BY google_review_count DESC'
   );
 
   console.log(`\n🏪 ${buedchenList.length} Büdchen zu verarbeiten (ohne enriched_at)\n`);
@@ -85,18 +84,7 @@ async function main() {
       // Schritt 1: Google Reviews
       const reviews = await fetchReviews(b.google_place_id);
 
-      // Schritt 2: Geo-Anreicherung via Overpass
-      let distances = null;
-      try {
-        distances = await getPoiDistances(b.lat, b.lng);
-      } catch {
-        process.stdout.write('[geo-err] ');
-      }
-
-      // Schritt 3: buedchen_type
-      const buedchen_type = getBuedchenType(distances);
-
-      // Schritt 4: LLM-Enrichment
+      // Schritt 2: LLM-Enrichment (geo-Felder bereits durch geo-enrich.mjs gesetzt)
       const prompt  = buildEnrichPrompt(b, reviews);
       const rawLLM  = await callLLM(prompt);
       const result  = validateLLMOutput(rawLLM, reviews);
@@ -112,36 +100,32 @@ async function main() {
         continue;
       }
 
-      // Schritt 5: In DB schreiben
+      // Schritt 3: In DB schreiben (geo-Felder werden nicht angefasst)
       await conn.query(
         `UPDATE buedchen SET
-          buedchen_type  = ?,
           character_tags = ?,
           ai_summary     = ?,
           ai_confidence  = ?,
-          poi_distances  = ?,
           enriched_at    = NOW()
         WHERE id = ?`,
         [
-          buedchen_type,
           JSON.stringify(result.tags),
           result.summary,
           result.confidence,
-          JSON.stringify(distances),
           b.id,
         ]
       );
 
-      // Schritt 6: Bei niedrigem Confidence → Review-Queue
+      // Schritt 4: Bei niedrigem Confidence → Review-Queue
       if (result.confidence < CONFIDENCE_THRESHOLD) {
         await conn.query(
           `INSERT INTO enrichment_queue (buedchen_id, reason, ai_output) VALUES (?, ?, ?)`,
           [b.id, 'low_confidence', JSON.stringify(result)]
         );
-        console.log(`⚠️  conf=${result.confidence.toFixed(2)} → queue | ${buedchen_type}`);
+        console.log(`⚠️  conf=${result.confidence.toFixed(2)} → queue | ${b.buedchen_type}`);
         queued++;
       } else {
-        console.log(`✅ conf=${result.confidence.toFixed(2)} | ${buedchen_type} | tags: ${result.tags.join(', ')}`);
+        console.log(`✅ conf=${result.confidence.toFixed(2)} | ${b.buedchen_type} | tags: ${result.tags.join(', ')}`);
       }
 
       processed++;
