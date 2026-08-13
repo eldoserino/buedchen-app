@@ -35,7 +35,7 @@ geheimtipp    → Unbekannt trotz Qualität, "kaum jemand weiß davon", kleines 
 nachtfalke    → Auffällig lange geöffnet, Nachtbetrieb, 24h, sehr late hours
 frühaufsteher → Öffnet früh, Frühstücksangebot, morgens erste Anlaufstelle
 kaffee-institution → Kaffee ist Hauptthema der Bewertungen, Espresso/Cappuccino, Kaffeepause
-szene         → Treffpunkt einer bestimmten Szene, Party-Umfeld, besonderer Kiez-Charakter
+szene         → Treffpunkt einer bestimmten Szene, Party-Umfeld, besonderer Veedel-Charakter
 familienfreundlich → Bewertungen erwähnen Kinder, Familie, kinderfreundlich
 hunde-willkommen → Hunde explizit willkommen oder erwähnt
 fahrradfreundlich → Fahrradroute, Radfahrer, Abstellmöglichkeit erwähnt
@@ -45,7 +45,7 @@ seit-jahrzehnten → Jahrzehnte in Betrieb, generationsübergreifend
 blumengeschmückt → Blumenschmuck, Bepflanzung, schöne Außengestaltung
 mit-aussicht  → Schöner Blick, erhöhte Lage, Panorama
 rheinblick    → Rhein sichtbar oder Nähe explizit erwähnt
-veedel-treff    → Nachbarschaftstreffpunkt, Dorfplatz-Atmosphäre, Veedel-Gemeinschaft
+veedel-treff  → Nachbarschaftstreffpunkt, Dorfplatz-Atmosphäre, Veedel-Gemeinschaft
 partyort      → Party, Feiern, Eventlocation, Nachtleben
 
 Falls kein Tag wirklich passt: leeres Array [].
