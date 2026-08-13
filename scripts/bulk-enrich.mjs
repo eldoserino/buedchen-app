@@ -99,7 +99,7 @@ async function main() {
       // Schritt 4: LLM-Enrichment
       const prompt  = buildEnrichPrompt(b, reviews);
       const rawLLM  = await callLLM(prompt);
-      const result  = validateLLMOutput(rawLLM);
+      const result  = validateLLMOutput(rawLLM, reviews);
 
       if (!result) {
         await conn.query(
