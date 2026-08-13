@@ -36,10 +36,12 @@ AUFGABE:
 2. Schreibe einen deutschen Satz (max. 20 Wörter), der beschreibt
    was dieses Büdchen besonders macht — konkret, nicht generisch.
    Beginne nicht mit dem Namen des Büdchens.
-3. Confidence-Score 0.0–1.0:
-   1.0 = viele aussagekräftige Bewertungen
-   0.5 = wenige oder oberflächliche Bewertungen
-   0.0 = kaum verwertbare Daten
+3. Confidence-Score 0.0–1.0 — berechne anhand der Bewertungsanzahl:
+   0.9–1.0 = 8+ detaillierte deutsche Bewertungen
+   0.7–0.8 = 4–7 Bewertungen oder gemischte Sprachen
+   0.5–0.6 = 1–3 Bewertungen oder sehr kurze Texte
+   0.2–0.4 = nur englische/fremde Bewertungen ohne Ortsbezug
+   0.0–0.1 = keine Bewertungen vorhanden
 
 ANTWORT (exakt dieses Format):
 {
