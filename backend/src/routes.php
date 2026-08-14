@@ -44,7 +44,7 @@ $app->get('/api/buedchen', function (Request $request, Response $response) {
                    tags, editorial_badges, opening_hours
             FROM buedchen
             WHERE ' . implode(' AND ', $where) . '
-            ORDER BY editorial_badges IS NOT NULL DESC, google_rating DESC
+            ORDER BY JSON_LENGTH(editorial_badges) > 0 DESC, google_rating DESC
             LIMIT 1000';
 
     $stmt = $db->prepare($sql);
