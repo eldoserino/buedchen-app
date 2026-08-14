@@ -4,6 +4,11 @@ declare(strict_types=1);
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
+require_once __DIR__ . '/RouteGenerator.php';
+
+// ORS-API-Key aus config.php (via include-Scope aus index.php)
+$orsApiKey = $config['ors_api_key'] ?? '';
+
 // ──────────────────────────────────────────────────────────────────
 // GET /api/buedchen
 // ──────────────────────────────────────────────────────────────────
@@ -280,6 +285,52 @@ $app->post('/api/review-queue/{id}/resolve', function (Request $request, Respons
        ->execute([$entry['buedchen_id']]);
 
     return jsonResponse($response, ['ok' => true]);
+});
+
+// ──────────────────────────────────────────────────────────────────
+// POST /api/route/generate
+// ──────────────────────────────────────────────────────────────────
+$app->post('/api/route/generate', function (Request $request, Response $response) use ($orsApiKey) {
+    $db   = $this->get('db');
+    $body = json_decode((string) $request->getBody(), true) ?? [];
+
+    $lat    = isset($body['start_lat']) ? (float) $body['start_lat'] : null;
+    $lng    = isset($body['start_lng']) ? (float) $body['start_lng'] : null;
+    $radius = isset($body['radius_m'])  ? (int)   $body['radius_m']  : null;
+    $themes = isset($body['themes'])    ? (array) $body['themes']    : [];
+
+    if ($lat === null || $lng === null || $radius === null) {
+        return jsonResponse($response, ['error' => 'invalid_input', 'message' => 'start_lat, start_lng und radius_m sind erforderlich.'], 400);
+    }
+
+    // Kölner Bounding Box
+    if ($lat < 50.83 || $lat > 51.08 || $lng < 6.77 || $lng > 7.16) {
+        return jsonResponse($response, ['error' => 'invalid_input', 'message' => 'Startpunkt liegt außerhalb von Köln.'], 400);
+    }
+
+    if ($radius < 500 || $radius > 3000) {
+        return jsonResponse($response, ['error' => 'invalid_input', 'message' => 'radius_m muss zwischen 500 und 3000 liegen.'], 400);
+    }
+
+    $validThemes = ['entdecken', 'veedel', 'abhängen', 'klassiker'];
+    $themes      = array_values(array_filter($themes, fn($t) => in_array($t, $validThemes)));
+    if (count($themes) < 1 || count($themes) > 2) {
+        return jsonResponse($response, ['error' => 'invalid_input', 'message' => 'Bitte 1–2 Themen auswählen.'], 400);
+    }
+
+    $body['themes']   = $themes;
+    $body['start_lat'] = $lat;
+    $body['start_lng'] = $lng;
+    $body['radius_m']  = $radius;
+
+    $gen    = new RouteGenerator($db, $orsApiKey);
+    $result = $gen->generate($body);
+
+    if (isset($result['error']) && $result['error'] === 'no_results') {
+        return jsonResponse($response, $result, 404);
+    }
+
+    return jsonResponse($response, $result);
 });
 
 // ──────────────────────────────────────────────────────────────────

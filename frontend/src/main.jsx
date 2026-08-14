@@ -8,6 +8,7 @@ import ListPage from './pages/ListPage'
 import DetailPage from './pages/DetailPage'
 import ToursPage from './pages/ToursPage'
 import TourDetailPage from './pages/TourDetailPage'
+import RouteResultPage from './pages/RouteResultPage'
 import AdminPage from './pages/AdminPage'
 import './styles/global.css'
 
@@ -21,6 +22,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="/liste" element={<ListPage />} />
             <Route path="/buedchen/:id" element={<DetailPage />} />
             <Route path="/touren" element={<ToursPage />} />
+            <Route path="/touren/generiert" element={<RouteResultPage />} />
             <Route path="/touren/:slug" element={<TourDetailPage />} />
           </Route>
           <Route path="/admin" element={<AdminPage />} />
