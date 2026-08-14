@@ -13,4 +13,5 @@ return [
         'user' => 'dominik',
         'pass' => 'SICHERES_PASSWORT_EINTRAGEN',
     ],
+    'ors_api_key' => '',  // OpenRouteService API-Key (openrouteservice.org)
 ];

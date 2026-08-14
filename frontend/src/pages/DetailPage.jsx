@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router'
-import { Clock, MapPin, Note, Star } from '@phosphor-icons/react'
+import { Clock, MapPin, Note, Star, Path } from '@phosphor-icons/react'
 import StatusStrip from '../components/StatusStrip'
 import FloatBack from '../components/FloatBack'
 import Checker from '../components/Checker'
@@ -153,6 +153,22 @@ export default function DetailPage() {
           <InfoRow icon={<Note weight="fill" size={16} />} label="Ausstattung">
             {features}
           </InfoRow>
+          {b.poi_distances && (() => {
+            const d     = b.poi_distances
+            const parts = []
+            if (d.nearest_plaza_m != null && d.nearest_plaza_m < 800)
+              parts.push(`${d.nearest_plaza_m} m zum nächsten Platz`)
+            if (d.nearest_park_m  != null && d.nearest_park_m  < 800)
+              parts.push(`${d.nearest_park_m} m zum nächsten Park`)
+            if (d.rhein_m         != null && d.rhein_m         < 800)
+              parts.push(`${d.rhein_m} m zum Rhein`)
+            if (!parts.length) return null
+            return (
+              <InfoRow icon={<Path weight="fill" size={16} />} label="In der Nähe">
+                {parts.join(' · ')}
+              </InfoRow>
+            )
+          })()}
         </div>
 
         {/* Redaktionell */}
