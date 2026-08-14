@@ -61,19 +61,48 @@ Suche das spezifischste Detail aus den Bewertungen:
   - Besondere Geschichte: "seit 40 Jahren im Veedel"
   - Besondere Atmosphäre die KONKRET beschrieben wird
 
-VERBOTEN (zu generisch, gilt für jeden Kiosk):
+VERBOTEN — zu generisch:
   ✗ "freundlicher Service" / "freundliches Personal"
   ✗ "faire Preise" / "gute Preise"
   ✗ "großes Sortiment" / "breite Auswahl"
   ✗ "beliebter Treffpunkt" / "nettes Büdchen"
   ✗ "empfehlenswert"
 
+VERBOTEN — Preise:
+  ✗ Keine konkreten Preisangaben — Preise ändern sich ("1,80 Euro", "kostet X €")
+  ✓ Preiswahrnehmung ist OK: "einer der günstigsten der Stadt", "erschwinglich"
+
+VERBOTEN — Gedankenstrich als Stilmittel:
+  ✗ Kein "Hauptsatz — Zusatz" Muster mit em-Dash (—)
+  ✓ Einen fließenden Satz schreiben, kein zweiteiliges Konstrukt
+
+VERBOTEN — Einzelquellen-Übernahme:
+  ✗ Nicht eine Bewertung wörtlich paraphrasieren
+  ✓ Aus mehreren Bewertungen synthetisieren oder das Besondere verallgemeinern
+
+VERBOTEN — Geo-Typen im Text:
+  ✗ Interne Geo-Bezeichnungen nicht in der Summary verwenden:
+    "Platzbüdchen", "Uferbüdchen", "Straßenbüdchen", "Parkbüdchen"
+  ✓ Stattdessen konkret beschreiben: "direkt am Platz", "am Rheinufer", "im Park"
+
+VERBOTEN — schlechtes Kölsch/Deutsch:
+  ✗ Den Veedel-Namen nennen — steht bereits separat im UI, ist redundant
+  ✗ "[Veedel]-Büdchen" als Kompositum (nicht "Kalk-Büdchen", "Nippes-Büdchen")
+  ✗ "im Kalk" / "im Nippes" — es heißt "in Kalk", "in Nippes", "in Ehrenfeld"
+  ✗ Gestelzte Komposita: "Kölsch-Kundschaft", "Abend-Treffpunkt", "Stamm-Gäste"
+  ✗ Adjektiv "verankert" in Bezug auf Stammgäste oder Tradition
+
+SPRACHE: Natürliches, umgangssprachliches Deutsch. Kein Übersetzungsdeutsch.
+  Gut: "Seit 40 Jahren die erste Adresse für Radfahrer am Rhein."
+  Schlecht: "Jahrzehntelang verankerte Kundschaft schätzt diesen Treffpunkt."
+
 BEISPIELE guter Summarys:
   ✓ "Das einzige 24-Stunden-Büdchen in Bickendorf mit riesiger Shisha-Abteilung."
-  ✓ "Internationale Snacks rund um die Uhr — Lebensretter auf der Radtour."
+  ✓ "Internationale Snacks rund um die Uhr, Lebensretter für Radfahrer am Rhein."
   ✓ "Die Geschwister hier kennt das ganze Nippes, Stammgäste seit Jahrzehnten."
-  ✓ "Täglich frischer Cappuccino für 1,50 € — der günstigste im Veedel."
-  ✓ "Direkt an der Endhaltestelle, für Rodenkirchen die letzte Einkaufsstation."
+  ✓ "Täglich frischer Cappuccino, einer der günstigsten Kaffees der ganzen Stadt."
+  ✓ "Direkt an der Endhaltestelle, für Pendler die letzte Einkaufsstation."
+  ✓ "Frisches Brot, eiskaltes Bier und der beste Döner nach Mitternacht."
 
 Falls die Bewertungen zu dünn sind für ein spezifisches Detail:
   → Schreibe was der Kiosk hauptsächlich anbietet, möglichst konkret.
