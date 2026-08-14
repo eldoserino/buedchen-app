@@ -1,8 +1,9 @@
 /**
- * Editorial Scraper — direktes Substring/Token-Matching, kein LLM.
+ * Editorial Scraper — direktes Substring/Token/Adress-Matching, kein LLM.
  *
- * Alle 672 Büdchen-Namen werden direkt gegen den Artikel-Text geprüft.
+ * Alle Büdchen-Namen werden direkt gegen den Artikel-Text geprüft.
  * Schreibt in editorial_sources (Detail) UND editorial_badges (UI).
+ * Unbestätigte Token-Matches → scripts/tmp/editorial-unconfirmed.json
  *
  * Ausführen:
  *   node scripts/scrape-editorial.mjs            (live, schreibt in DB)
@@ -11,18 +12,26 @@
  */
 
 import 'dotenv/config';
+import fs   from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import db from './lib/db.mjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TMP_DIR   = path.join(__dirname, 'tmp');
 
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
-// Wörter die in Büdchen-Artikeln generisch vorkommen und keine sicheren Matches liefern
+// Wörter die in Büdchen-Artikeln generisch vorkommen — keine sicheren Matches
 const GENERIC = new Set([
   'kiosk', 'büdchen', 'bude', 'lotto', 'shop', 'imbiss', 'eck', 'ecke',
   'tabak', 'presse', 'snack', 'cafe', 'kaffee', 'getränke', 'getranke',
   'lebensmittel', 'spirituosen', 'zeitschriften', 'biergarten',
 ]);
 
+// Kölner Branchen entfernt: Branchen-Verzeichnis, kein redaktioneller Artikel.
+// Produziert False Positives durch generische Kategorietexte ("Trinkhalle", "Kiosk").
 const EDITORIAL_SOURCES = [
   {
     name: 'Mit Vergnügen Köln',
@@ -41,12 +50,6 @@ const EDITORIAL_SOURCES = [
     name: 'KölnTourismus',
     urls: [
       'https://www.koelntourismus.de/erlebnisse-lifestyle/lifestyle/buedchen-kultur',
-    ],
-  },
-  {
-    name: 'Kölner Branchen',
-    urls: [
-      'https://www.koelnerbranchen.de/buedchen/koeln/',
     ],
   },
 ];
@@ -84,34 +87,42 @@ async function fetchText(url) {
   return htmlToText(await res.text());
 }
 
-/**
- * Extrahiert den Kontext-Text um eine Fundstelle im Artikel.
- * searchStr wird case-insensitiv gesucht, Snippet kommt aus Originaltext.
- */
 function extractSnippet(text, searchStr, contextLen = 80) {
   const idx = text.toLowerCase().indexOf(searchStr.toLowerCase());
   if (idx < 0) return '';
   const start = Math.max(0, idx - 25);
-  const end = Math.min(text.length, idx + searchStr.length + contextLen);
+  const end   = Math.min(text.length, idx + searchStr.length + contextLen);
   let snippet = text.slice(start, end).replace(/\s+/g, ' ').trim();
-  if (start > 0) snippet = '…' + snippet;
-  if (end < text.length) snippet += '…';
+  if (start > 0)          snippet = '…' + snippet;
+  if (end < text.length)  snippet += '…';
   return snippet;
+}
+
+/**
+ * Prüft ob die Straßenadresse eines Büdchens im Artikel-Text erscheint.
+ * Erkennt "Herderstraße 42" und "Herderstr. 42" als gleichwertig.
+ */
+function addressInText(address, normText) {
+  if (!address) return false;
+  // Nur Straße + Hausnummer (vor erstem Komma), Punkte entfernen
+  const base = address.split(',')[0].trim().toLowerCase()
+    .replace(/[''`\-]/g, '')
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const abbr = base.replace(/straße/g, 'str').replace(/strasse/g, 'str');
+  const textNoDot = normText.replace(/\./g, '');
+  return textNoDot.includes(base) || textNoDot.includes(abbr);
 }
 
 /**
  * Findet alle Büdchen die im Text vorkommen — ohne LLM.
  *
- * Strategie 1 — Vollständiger Name (exakt, nach normalize):
- *   "Büdchen Casablanca" → "büdchen casablanca" in normText → Match (exact)
- *   Schreibt in editorial_sources UND editorial_badges.
+ * Strategie 1 — Vollständiger Name (exakt):         → Badge
+ * Strategie 2 — Distinktiver Token (≥ 9 Zeichen):  → kein Badge (unbestätigt)
+ * Strategie 3 — Token + Adresse im Text:            → Badge (hohe Konfidenz)
  *
- * Strategie 2 — Distinktiver Token (≥ 9 Zeichen, nicht generisch):
- *   "Lindenkiosk Braunsfeld" → "lindenkiosk" in normText → Match (token)
- *   Schreibt nur in editorial_sources (niedrigere Konfidenz, kein Badge).
- *
- * Namen die nur aus generischen Wörtern bestehen (z.B. "Kiosk", "Büdchen")
- * werden komplett übersprungen — zu viele False Positives.
+ * Namen die komplett aus generischen Wörtern bestehen werden übersprungen.
  */
 function findMentions(text, allBuedchen) {
   const normText = normalize(text);
@@ -120,13 +131,12 @@ function findMentions(text, allBuedchen) {
   for (const b of allBuedchen) {
     const normFull = normalize(b.name);
 
-    // Überspringe Namen die komplett aus generischen Wörtern bestehen
     const meaningfulParts = normFull.split(/\s+/)
       .map(t => t.replace(/[^a-zäöüß]/gu, ''))
       .filter(t => t.length > 2);
     if (meaningfulParts.length === 0 || meaningfulParts.every(t => GENERIC.has(t))) continue;
 
-    // Strategie 1: vollständiger normalisierter Name → exact (Badge-würdig)
+    // Strategie 1: exakter Name → Badge
     if (normText.includes(normFull)) {
       results.push({
         buedchen:  b,
@@ -137,7 +147,7 @@ function findMentions(text, allBuedchen) {
       continue;
     }
 
-    // Strategie 2: distinktiver Token ≥ 9 Zeichen → token (kein Badge)
+    // Strategie 2/3: distinktiver Token ≥ 9 Zeichen
     const distinctiveTokens = normFull
       .split(/\s+/)
       .map(t => t.replace(/[^a-zäöüß]/gu, ''))
@@ -145,11 +155,15 @@ function findMentions(text, allBuedchen) {
 
     if (distinctiveTokens.length > 0 && distinctiveTokens.some(t => normText.includes(t))) {
       const longestToken = distinctiveTokens.reduce((a, b) => a.length > b.length ? a : b);
+
+      // Strategie 3: Token + Adresse im Text → Badge
+      const addrConfirmed = addressInText(b.address, normText);
+
       results.push({
         buedchen:  b,
         snippet:   extractSnippet(text, longestToken),
-        matchType: 'token',
-        badge:     false,
+        matchType: addrConfirmed ? 'address' : 'token',
+        badge:     addrConfirmed,
       });
     }
   }
@@ -167,15 +181,19 @@ async function main() {
     if (isDryRun) {
       console.log('ℹ️  --reset mit --dry-run: kein echtes Reset\n');
     } else {
-      await conn.query("UPDATE buedchen SET editorial_sources = NULL, editorial_badges = NULL WHERE editorial_sources IS NOT NULL OR editorial_badges IS NOT NULL");
+      await conn.query(
+        'UPDATE buedchen SET editorial_sources = NULL, editorial_badges = NULL WHERE editorial_sources IS NOT NULL OR editorial_badges IS NOT NULL'
+      );
       console.log('🗑️  Alle editorial_sources und editorial_badges zurückgesetzt\n');
     }
   }
 
-  const [allBuedchen] = await conn.query('SELECT id, name FROM buedchen');
+  // address für Strategie 3 mitladen
+  const [allBuedchen] = await conn.query('SELECT id, name, address FROM buedchen');
   console.log(`📋 ${allBuedchen.length} Büdchen in DB${isDryRun ? ' (dry-run — keine DB-Änderungen)' : ''}\n`);
 
   let totalNew = 0;
+  const allUnconfirmed = [];  // Token-Matches ohne Badge → für Agent-Review
 
   for (const source of EDITORIAL_SOURCES) {
     for (const url of source.urls) {
@@ -191,12 +209,30 @@ async function main() {
         continue;
       }
 
-      const mentions = findMentions(text, allBuedchen);
-      console.log(`   ${mentions.length} Matches\n`);
+      const mentions    = findMentions(text, allBuedchen);
+      const confirmed   = mentions.filter(m => m.badge);
+      const unconfirmed = mentions.filter(m => !m.badge);
+      console.log(`   ${confirmed.length} mit Badge (exact/address), ${unconfirmed.length} unbestätigt (token)\n`);
+
+      // Unbestätigte Kandidaten sammeln — Artikel-Text für Agent
+      if (unconfirmed.length > 0) {
+        allUnconfirmed.push({
+          source:       source.name,
+          url,
+          article_text: text.slice(0, 15000),
+          candidates:   unconfirmed.map(m => ({
+            id:      m.buedchen.id,
+            name:    m.buedchen.name,
+            address: m.buedchen.address,
+            snippet: m.snippet,
+          })),
+        });
+      }
 
       for (const { buedchen, snippet, matchType, badge } of mentions) {
-        const icon = matchType === 'exact' ? '✅' : '🔍';
-        console.log(`   ${icon} [${matchType}${badge ? '' : ', kein Badge'}] "${buedchen.name}"`);
+        const icon      = badge ? '✅' : '🔍';
+        const typeLabel = matchType === 'address' ? 'address ✓' : matchType;
+        console.log(`   ${icon} [${typeLabel}${badge ? '' : ', kein Badge'}] "${buedchen.name}"`);
         if (snippet) console.log(`        "${snippet.slice(0, 70)}"`);
 
         if (isDryRun) continue;
@@ -218,7 +254,6 @@ async function main() {
             match_type: matchType,
           });
 
-          // editorial_badges (UI + Map-Marker) nur für exact matches
           const existingBadges = rows[0]?.editorial_badges || [];
           const badges = badge
             ? [...new Set([...existingBadges, source.name])]
@@ -235,6 +270,17 @@ async function main() {
       console.log('');
       await new Promise(r => setTimeout(r, 2000));
     }
+  }
+
+  // Token-Match-Kandidaten für Agent-Review speichern
+  if (allUnconfirmed.length > 0) {
+    await fs.mkdir(TMP_DIR, { recursive: true });
+    const outPath = path.join(TMP_DIR, 'editorial-unconfirmed.json');
+    await fs.writeFile(outPath, JSON.stringify(allUnconfirmed, null, 2), 'utf8');
+    const total = allUnconfirmed.reduce((n, g) => n + g.candidates.length, 0);
+    console.log(`\n💾 ${total} Token-Kandidaten für Agent-Review gespeichert:`);
+    console.log(`   ${outPath}`);
+    console.log(`   → nach Agent-Review: node scripts/write-editorial-badges.mjs\n`);
   }
 
   conn.release();
