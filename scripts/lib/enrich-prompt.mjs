@@ -149,20 +149,3 @@ export function validateLLMOutput(raw, reviews = []) {
     return null;
   }
 }
-
-export function buildEditorialPrompt(articleText, sourceName) {
-  return `Extrahiere alle Büdchen aus diesem Kölner Artikel.
-Antworte NUR mit JSON, kein Text davor oder danach.
-
-ARTIKEL (${sourceName}):
-${articleText.slice(0, 4000)}
-
-FORMAT:
-{
-  "buedchen": [
-    { "name": "Name des Büdchens", "snippet": "Kontext aus dem Artikel, max 80 Zeichen" }
-  ]
-}
-
-Falls keine Büdchen erwähnt werden: { "buedchen": [] }`.trim();
-}
