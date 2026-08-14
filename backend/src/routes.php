@@ -213,46 +213,27 @@ $app->get('/api/pois', function (Request $request, Response $response) {
 });
 
 // ──────────────────────────────────────────────────────────────────
-// Hilfsfunktion: HTTP Basic Auth für Review-Queue
-// ──────────────────────────────────────────────────────────────────
-function checkBasicAuth(Request $request, Response $response): ?Response {
-    global $config;
-    $auth = $request->getHeaderLine('Authorization');
-    if (!preg_match('/^Basic (.+)$/', $auth, $m)) {
-        return $response
-            ->withHeader('WWW-Authenticate', 'Basic realm="Büdchen Review"')
-            ->withStatus(401);
-    }
-    $decoded = base64_decode($m[1]);
-    [$user, $pass] = array_pad(explode(':', $decoded, 2), 2, '');
-    $validUser = $config['review_queue']['user'] ?? '';
-    $validPass = $config['review_queue']['pass'] ?? '';
-    if ($user !== $validUser || $pass !== $validPass) {
-        return $response->withStatus(401);
-    }
-    return null;
-}
-
-// ──────────────────────────────────────────────────────────────────
-// GET /api/review-queue  (HTTP Basic Auth)
+// GET /api/review-queue  (geschützt via Cloudflare Zero Trust)
 // ──────────────────────────────────────────────────────────────────
 $app->get('/api/review-queue', function (Request $request, Response $response) {
-    $authError = checkBasicAuth($request, $response);
-    if ($authError) return $authError;
-
     $db   = $this->get('db');
+    // Nur neuester Eintrag pro Büdchen (Duplikate aus mehreren Enrichment-Runs)
     $stmt = $db->query(
-        'SELECT q.*, b.name AS buedchen_name
+        'SELECT q.*, b.name AS buedchen_name, b.veedel, b.address
          FROM enrichment_queue q
          JOIN buedchen b ON b.id = q.buedchen_id
          WHERE q.resolved = 0
+           AND q.id = (
+             SELECT MAX(q2.id) FROM enrichment_queue q2
+             WHERE q2.buedchen_id = q.buedchen_id AND q2.resolved = 0
+           )
          ORDER BY q.created_at DESC
-         LIMIT 100'
+         LIMIT 200'
     );
     $rows = $stmt->fetchAll();
 
     foreach ($rows as &$row) {
-        $row['ai_output'] = $row['ai_output'] ? json_decode($row['ai_output']) : null;
+        $row['ai_output'] = $row['ai_output'] ? json_decode($row['ai_output'], true) : null;
         $row['resolved']  = (bool) $row['resolved'];
     }
 
@@ -260,12 +241,9 @@ $app->get('/api/review-queue', function (Request $request, Response $response) {
 });
 
 // ──────────────────────────────────────────────────────────────────
-// POST /api/review-queue/:id/resolve  (HTTP Basic Auth)
+// POST /api/review-queue/:id/resolve  (geschützt via Cloudflare Zero Trust)
 // ──────────────────────────────────────────────────────────────────
 $app->post('/api/review-queue/{id}/resolve', function (Request $request, Response $response, array $args) {
-    $authError = checkBasicAuth($request, $response);
-    if ($authError) return $authError;
-
     $db   = $this->get('db');
     $id   = (int) $args['id'];
     $body = json_decode((string) $request->getBody(), true) ?? [];
@@ -282,23 +260,24 @@ $app->post('/api/review-queue/{id}/resolve', function (Request $request, Respons
     $overrides = $body['overrides'] ?? [];
 
     if ($accepted) {
-        $tags    = isset($overrides['tags'])    ? json_encode($overrides['tags'])    : null;
-        $summary = isset($overrides['summary']) ? (string) $overrides['summary']     : null;
+        $aiOutput = $entry['ai_output'] ? json_decode($entry['ai_output'], true) : [];
+        $tags     = isset($overrides['tags'])    ? $overrides['tags']    : ($aiOutput['tags']    ?? null);
+        $summary  = isset($overrides['summary']) ? $overrides['summary'] : ($aiOutput['summary'] ?? null);
 
         $sets = ['enriched_at = NOW()'];
         $vals = [];
 
-        if ($tags !== null)    { $sets[] = 'character_tags = ?'; $vals[] = $tags; }
-        if ($summary !== null) { $sets[] = 'ai_summary = ?';     $vals[] = substr($summary, 0, 200); }
+        if ($tags !== null)    { $sets[] = 'character_tags = ?'; $vals[] = json_encode($tags); }
+        if ($summary !== null) { $sets[] = 'ai_summary = ?';     $vals[] = substr((string)$summary, 0, 200); }
 
-        if ($sets) {
-            $vals[] = $entry['buedchen_id'];
-            $db->prepare('UPDATE buedchen SET ' . implode(', ', $sets) . ' WHERE id = ?')
-               ->execute($vals);
-        }
+        $vals[] = $entry['buedchen_id'];
+        $db->prepare('UPDATE buedchen SET ' . implode(', ', $sets) . ' WHERE id = ?')
+           ->execute($vals);
     }
 
-    $db->prepare('UPDATE enrichment_queue SET resolved = 1 WHERE id = ?')->execute([$id]);
+    // Alle Duplikate dieses Büdchens mitauflösen
+    $db->prepare('UPDATE enrichment_queue SET resolved = 1 WHERE buedchen_id = ? AND resolved = 0')
+       ->execute([$entry['buedchen_id']]);
 
     return jsonResponse($response, ['ok' => true]);
 });
