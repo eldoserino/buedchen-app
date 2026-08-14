@@ -18,6 +18,12 @@ function normalize(s) {
 
 /**
  * Finds the best matching candidate for a name.
+ *
+ * Substring-Bonus: wenn der gesuchte Name im Kandidaten enthalten ist
+ * (oder umgekehrt), wird die effektive Distanz auf den Längenunterschied
+ * reduziert — findet also "Lindenkiosk" in "Lindenkiosk Braunsfeld" bei
+ * ausreichend hohem maxDist.
+ *
  * Returns { id, name, distance } or null if no match within maxDist.
  */
 export function fuzzyMatch(name, candidates, maxDist = 2) {
@@ -26,7 +32,14 @@ export function fuzzyMatch(name, candidates, maxDist = 2) {
   let bestDist = Infinity;
 
   for (const c of candidates) {
-    const dist = levenshtein(normName, normalize(c.name));
+    const normCand = normalize(c.name);
+    let dist = levenshtein(normName, normCand);
+
+    // Substring-Bonus: einer enthält den anderen vollständig → Distanz = Längenunterschied
+    if (normCand.includes(normName) || normName.includes(normCand)) {
+      dist = Math.min(dist, Math.abs(normName.length - normCand.length));
+    }
+
     if (dist < bestDist) {
       bestDist = dist;
       best = c;

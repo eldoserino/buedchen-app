@@ -1,25 +1,27 @@
 /**
- * Editorial Scraper — Script 3
- * Scrapet bekannte Artikel-URLs, matched Büdchen-Erwähnungen gegen DB.
+ * Editorial Scraper — direktes Substring/Token-Matching, kein LLM.
  *
- * Ausführen: node scripts/scrape-editorial.mjs
+ * Alle 672 Büdchen-Namen werden direkt gegen den Artikel-Text geprüft.
+ * Schreibt in editorial_sources (Detail) UND editorial_badges (UI).
+ *
+ * Ausführen:
+ *   node scripts/scrape-editorial.mjs            (live, schreibt in DB)
+ *   node scripts/scrape-editorial.mjs --dry-run  (zeigt Matches, ändert nichts)
+ *   node scripts/scrape-editorial.mjs --reset    (löscht alle editorial-Daten zuerst)
  */
 
 import 'dotenv/config';
-import OpenAI from 'openai';
 import db from './lib/db.mjs';
-import { fuzzyMatch } from './lib/fuzzy-match.mjs';
-import { buildEditorialPrompt } from './lib/enrich-prompt.mjs';
 
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
-const OLLAMA_MODEL    = 'qwen2.5:14b';
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
-const client = new OpenAI({
-  baseURL: OLLAMA_BASE_URL,
-  apiKey:  'ollama',
-});
-
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+// Wörter die in Büdchen-Artikeln generisch vorkommen und keine sicheren Matches liefern
+const GENERIC = new Set([
+  'kiosk', 'büdchen', 'bude', 'lotto', 'shop', 'imbiss', 'eck', 'ecke',
+  'tabak', 'presse', 'snack', 'cafe', 'kaffee', 'getränke', 'getranke',
+  'lebensmittel', 'spirituosen', 'zeitschriften', 'biergarten',
+]);
 
 const EDITORIAL_SOURCES = [
   {
@@ -49,6 +51,13 @@ const EDITORIAL_SOURCES = [
   },
 ];
 
+function normalize(s) {
+  return s.toLowerCase()
+    .replace(/[''`\-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function htmlToText(html) {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -69,123 +78,173 @@ function htmlToText(html) {
 async function fetchText(url) {
   const res = await fetch(url, {
     headers: { 'User-Agent': USER_AGENT },
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(20000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const html = await res.text();
-  return htmlToText(html);
+  return htmlToText(await res.text());
 }
 
-async function extractBuedchenFromText(text, sourceName) {
-  const prompt  = buildEditorialPrompt(text, sourceName);
-  const response = await client.chat.completions.create({
-    model:           OLLAMA_MODEL,
-    messages:        [{ role: 'user', content: prompt }],
-    response_format: { type: 'json_object' },
-    temperature:     0.0,
-  });
+/**
+ * Extrahiert den Kontext-Text um eine Fundstelle im Artikel.
+ * searchStr wird case-insensitiv gesucht, Snippet kommt aus Originaltext.
+ */
+function extractSnippet(text, searchStr, contextLen = 80) {
+  const idx = text.toLowerCase().indexOf(searchStr.toLowerCase());
+  if (idx < 0) return '';
+  const start = Math.max(0, idx - 25);
+  const end = Math.min(text.length, idx + searchStr.length + contextLen);
+  let snippet = text.slice(start, end).replace(/\s+/g, ' ').trim();
+  if (start > 0) snippet = '…' + snippet;
+  if (end < text.length) snippet += '…';
+  return snippet;
+}
 
-  const raw = response.choices[0]?.message?.content || '{}';
-  try {
-    const cleaned = raw.trim()
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```$/, '');
-    const parsed = JSON.parse(cleaned);
-    return Array.isArray(parsed) ? parsed : (parsed.buedchen || parsed.result || []);
-  } catch {
-    return [];
+/**
+ * Findet alle Büdchen die im Text vorkommen — ohne LLM.
+ *
+ * Strategie 1 — Vollständiger Name (exakt, nach normalize):
+ *   "Büdchen Casablanca" → "büdchen casablanca" in normText → Match (exact)
+ *   Schreibt in editorial_sources UND editorial_badges.
+ *
+ * Strategie 2 — Distinktiver Token (≥ 9 Zeichen, nicht generisch):
+ *   "Lindenkiosk Braunsfeld" → "lindenkiosk" in normText → Match (token)
+ *   Schreibt nur in editorial_sources (niedrigere Konfidenz, kein Badge).
+ *
+ * Namen die nur aus generischen Wörtern bestehen (z.B. "Kiosk", "Büdchen")
+ * werden komplett übersprungen — zu viele False Positives.
+ */
+function findMentions(text, allBuedchen) {
+  const normText = normalize(text);
+  const results  = [];
+
+  for (const b of allBuedchen) {
+    const normFull = normalize(b.name);
+
+    // Überspringe Namen die komplett aus generischen Wörtern bestehen
+    const meaningfulParts = normFull.split(/\s+/)
+      .map(t => t.replace(/[^a-zäöüß]/gu, ''))
+      .filter(t => t.length > 2);
+    if (meaningfulParts.length === 0 || meaningfulParts.every(t => GENERIC.has(t))) continue;
+
+    // Strategie 1: vollständiger normalisierter Name → exact (Badge-würdig)
+    if (normText.includes(normFull)) {
+      results.push({
+        buedchen:  b,
+        snippet:   extractSnippet(text, b.name),
+        matchType: 'exact',
+        badge:     true,
+      });
+      continue;
+    }
+
+    // Strategie 2: distinktiver Token ≥ 9 Zeichen → token (kein Badge)
+    const distinctiveTokens = normFull
+      .split(/\s+/)
+      .map(t => t.replace(/[^a-zäöüß]/gu, ''))
+      .filter(t => t.length >= 9 && !GENERIC.has(t));
+
+    if (distinctiveTokens.length > 0 && distinctiveTokens.some(t => normText.includes(t))) {
+      const longestToken = distinctiveTokens.reduce((a, b) => a.length > b.length ? a : b);
+      results.push({
+        buedchen:  b,
+        snippet:   extractSnippet(text, longestToken),
+        matchType: 'token',
+        badge:     false,
+      });
+    }
   }
+
+  return results;
 }
 
-async function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
+const isDryRun = process.argv.includes('--dry-run');
+const isReset  = process.argv.includes('--reset');
 
 async function main() {
   const conn = await db.getConnection();
 
-  const [allBuedchen] = await conn.query('SELECT id, name FROM buedchen');
-  console.log(`📋 ${allBuedchen.length} Büdchen in DB geladen\n`);
+  if (isReset) {
+    if (isDryRun) {
+      console.log('ℹ️  --reset mit --dry-run: kein echtes Reset\n');
+    } else {
+      await conn.query("UPDATE buedchen SET editorial_sources = NULL, editorial_badges = NULL WHERE editorial_sources IS NOT NULL OR editorial_badges IS NOT NULL");
+      console.log('🗑️  Alle editorial_sources und editorial_badges zurückgesetzt\n');
+    }
+  }
 
-  let totalMatched = 0, totalQueued = 0;
+  const [allBuedchen] = await conn.query('SELECT id, name FROM buedchen');
+  console.log(`📋 ${allBuedchen.length} Büdchen in DB${isDryRun ? ' (dry-run — keine DB-Änderungen)' : ''}\n`);
+
+  let totalNew = 0;
 
   for (const source of EDITORIAL_SOURCES) {
     for (const url of source.urls) {
-      process.stdout.write(`📰 ${source.name}: ${url}\n   Lade ... `);
+      process.stdout.write(`📰 ${source.name}\n   ${url}\n   Lade... `);
 
       let text;
       try {
         text = await fetchText(url);
-        process.stdout.write(`${text.length} Zeichen → LLM ...\n`);
+        process.stdout.write(`${text.length} Zeichen\n`);
       } catch (err) {
         console.log(`❌ Fetch-Fehler: ${err.message}`);
-        await sleep(2000);
+        await new Promise(r => setTimeout(r, 2000));
         continue;
       }
 
-      let mentions;
-      try {
-        mentions = await extractBuedchenFromText(text, source.name);
-      } catch (err) {
-        console.log(`   ❌ LLM-Fehler: ${err.message}`);
-        await sleep(2000);
-        continue;
-      }
+      const mentions = findMentions(text, allBuedchen);
+      console.log(`   ${mentions.length} Matches\n`);
 
-      console.log(`   LLM: ${mentions.length} Büdchen gefunden`);
+      for (const { buedchen, snippet, matchType, badge } of mentions) {
+        const icon = matchType === 'exact' ? '✅' : '🔍';
+        console.log(`   ${icon} [${matchType}${badge ? '' : ', kein Badge'}] "${buedchen.name}"`);
+        if (snippet) console.log(`        "${snippet.slice(0, 70)}"`);
 
-      for (const mention of mentions) {
-        const match = fuzzyMatch(mention.name, allBuedchen);
+        if (isDryRun) continue;
 
-        if (!match) {
-          await conn.query(
-            'INSERT INTO enrichment_queue (buedchen_id, reason, ai_output) VALUES (?, ?, ?)',
-            [allBuedchen[0]?.id || 'unknown', 'editorial_no_match',
-             JSON.stringify({ source: source.name, url, name: mention.name })]
-          );
-          console.log(`   ⚠️  Kein Match: "${mention.name}" → Queue`);
-          totalQueued++;
-          continue;
-        }
-
-        // Bestehende editorial_sources laden und erweitern
         const [rows] = await conn.query(
-          'SELECT editorial_sources FROM buedchen WHERE id = ?',
-          [match.id]
+          'SELECT editorial_sources, editorial_badges FROM buedchen WHERE id = ?',
+          [buedchen.id]
         );
-        const existing = JSON.parse(rows[0]?.editorial_sources || '[]');
-
-        const alreadyListed = existing.some(
-          e => e.source === source.name && e.url === url
-        );
+        // mysql2 parst JSON-Spalten automatisch → kein JSON.parse nötig
+        const existingSources = rows[0]?.editorial_sources || [];
+        const alreadyListed   = existingSources.some(e => e.source === source.name && e.url === url);
 
         if (!alreadyListed) {
-          const entry = {
+          existingSources.push({
             source:     source.name,
             url,
-            snippet:    (mention.snippet || '').slice(0, 80),
+            snippet:    snippet.slice(0, 80),
             scraped_at: new Date().toISOString().slice(0, 10),
-          };
-          existing.push(entry);
+            match_type: matchType,
+          });
+
+          // editorial_badges (UI + Map-Marker) nur für exact matches
+          const existingBadges = rows[0]?.editorial_badges || [];
+          const badges = badge
+            ? [...new Set([...existingBadges, source.name])]
+            : existingBadges;
 
           await conn.query(
-            'UPDATE buedchen SET editorial_sources = ? WHERE id = ?',
-            [JSON.stringify(existing), match.id]
+            'UPDATE buedchen SET editorial_sources = ?, editorial_badges = ? WHERE id = ?',
+            [JSON.stringify(existingSources), JSON.stringify(badges), buedchen.id]
           );
-
-          console.log(`   ✅ Match: "${mention.name}" → "${match.name}" (dist=${match.distance})`);
-          totalMatched++;
+          totalNew++;
         }
       }
 
-      await sleep(3000);
+      console.log('');
+      await new Promise(r => setTimeout(r, 2000));
     }
   }
 
   conn.release();
   await db.end();
 
-  console.log(`\nFertig: ${totalMatched} Matches, ${totalQueued} in Review-Queue`);
+  if (isDryRun) {
+    console.log('Dry-run abgeschlossen — nichts gespeichert.');
+  } else {
+    console.log(`Fertig: ${totalNew} neue editorial_sources-Einträge in DB geschrieben.`);
+  }
 }
 
 main().catch(err => {
