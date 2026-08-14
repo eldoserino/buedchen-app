@@ -28,6 +28,8 @@ const GENERIC = new Set([
   'kiosk', 'büdchen', 'bude', 'lotto', 'shop', 'imbiss', 'eck', 'ecke',
   'tabak', 'presse', 'snack', 'cafe', 'kaffee', 'getränke', 'getranke',
   'lebensmittel', 'spirituosen', 'zeitschriften', 'biergarten',
+  // Viertel-/Quartiernamen — erzeugen False Positives in Stadtbeschreibungen
+  'kwartier',
 ]);
 
 // Kölner Branchen entfernt: Branchen-Verzeichnis, kein redaktioneller Artikel.
