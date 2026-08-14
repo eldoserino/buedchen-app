@@ -205,7 +205,8 @@ async function main() {
           'SELECT editorial_sources, editorial_badges FROM buedchen WHERE id = ?',
           [buedchen.id]
         );
-        const existingSources = JSON.parse(rows[0]?.editorial_sources || '[]');
+        // mysql2 parst JSON-Spalten automatisch → kein JSON.parse nötig
+        const existingSources = rows[0]?.editorial_sources || [];
         const alreadyListed   = existingSources.some(e => e.source === source.name && e.url === url);
 
         if (!alreadyListed) {
@@ -218,7 +219,7 @@ async function main() {
           });
 
           // editorial_badges (UI + Map-Marker) nur für exact matches
-          const existingBadges = JSON.parse(rows[0]?.editorial_badges || '[]');
+          const existingBadges = rows[0]?.editorial_badges || [];
           const badges = badge
             ? [...new Set([...existingBadges, source.name])]
             : existingBadges;
