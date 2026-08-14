@@ -16,10 +16,11 @@ import db from './lib/db.mjs';
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
-// Wörter die als alleinige Tokens zu viele False Positives erzeugen
+// Wörter die in Büdchen-Artikeln generisch vorkommen und keine sicheren Matches liefern
 const GENERIC = new Set([
   'kiosk', 'büdchen', 'bude', 'lotto', 'shop', 'imbiss', 'eck', 'ecke',
-  'tabak', 'presse', 'snack', 'cafe', 'kaffee', 'getränk',
+  'tabak', 'presse', 'snack', 'cafe', 'kaffee', 'getränke', 'getranke',
+  'lebensmittel', 'spirituosen', 'zeitschriften', 'biergarten',
 ]);
 
 const EDITORIAL_SOURCES = [
@@ -102,11 +103,15 @@ function extractSnippet(text, searchStr, contextLen = 80) {
  * Findet alle Büdchen die im Text vorkommen — ohne LLM.
  *
  * Strategie 1 — Vollständiger Name (exakt, nach normalize):
- *   "Lindenkiosk Braunsfeld" → text enthält "lindenkiosk braunsfeld" → Match
+ *   "Büdchen Casablanca" → "büdchen casablanca" in normText → Match (exact)
+ *   Schreibt in editorial_sources UND editorial_badges.
  *
- * Strategie 2 — Distinktiver Token (≥ 8 Zeichen, nicht generisch):
- *   "Lindenkiosk Braunsfeld" → "lindenkiosk" (11 Zeichen) → text enthält "lindenkiosk" → Match
- *   Findet Büdchen die im Artikel nur mit Kurzname erwähnt werden.
+ * Strategie 2 — Distinktiver Token (≥ 9 Zeichen, nicht generisch):
+ *   "Lindenkiosk Braunsfeld" → "lindenkiosk" in normText → Match (token)
+ *   Schreibt nur in editorial_sources (niedrigere Konfidenz, kein Badge).
+ *
+ * Namen die nur aus generischen Wörtern bestehen (z.B. "Kiosk", "Büdchen")
+ * werden komplett übersprungen — zu viele False Positives.
  */
 function findMentions(text, allBuedchen) {
   const normText = normalize(text);
@@ -115,20 +120,28 @@ function findMentions(text, allBuedchen) {
   for (const b of allBuedchen) {
     const normFull = normalize(b.name);
 
-    // Strategie 1: vollständiger Name
+    // Überspringe Namen die komplett aus generischen Wörtern bestehen
+    const meaningfulParts = normFull.split(/\s+/)
+      .map(t => t.replace(/[^a-zäöüß]/gu, ''))
+      .filter(t => t.length > 2);
+    if (meaningfulParts.length === 0 || meaningfulParts.every(t => GENERIC.has(t))) continue;
+
+    // Strategie 1: vollständiger normalisierter Name → exact (Badge-würdig)
     if (normText.includes(normFull)) {
       results.push({
         buedchen:  b,
         snippet:   extractSnippet(text, b.name),
         matchType: 'exact',
+        badge:     true,
       });
       continue;
     }
 
-    // Strategie 2: ein distinktiver Token reicht
+    // Strategie 2: distinktiver Token ≥ 9 Zeichen → token (kein Badge)
     const distinctiveTokens = normFull
-      .split(' ')
-      .filter(t => t.length >= 8 && !GENERIC.has(t));
+      .split(/\s+/)
+      .map(t => t.replace(/[^a-zäöüß]/gu, ''))
+      .filter(t => t.length >= 9 && !GENERIC.has(t));
 
     if (distinctiveTokens.length > 0 && distinctiveTokens.some(t => normText.includes(t))) {
       const longestToken = distinctiveTokens.reduce((a, b) => a.length > b.length ? a : b);
@@ -136,6 +149,7 @@ function findMentions(text, allBuedchen) {
         buedchen:  b,
         snippet:   extractSnippet(text, longestToken),
         matchType: 'token',
+        badge:     false,
       });
     }
   }
@@ -180,15 +194,15 @@ async function main() {
       const mentions = findMentions(text, allBuedchen);
       console.log(`   ${mentions.length} Matches\n`);
 
-      for (const { buedchen, snippet, matchType } of mentions) {
+      for (const { buedchen, snippet, matchType, badge } of mentions) {
         const icon = matchType === 'exact' ? '✅' : '🔍';
-        console.log(`   ${icon} [${matchType}] "${buedchen.name}"`);
+        console.log(`   ${icon} [${matchType}${badge ? '' : ', kein Badge'}] "${buedchen.name}"`);
         if (snippet) console.log(`        "${snippet.slice(0, 70)}"`);
 
         if (isDryRun) continue;
 
         const [rows] = await conn.query(
-          'SELECT editorial_sources FROM buedchen WHERE id = ?',
+          'SELECT editorial_sources, editorial_badges FROM buedchen WHERE id = ?',
           [buedchen.id]
         );
         const existingSources = JSON.parse(rows[0]?.editorial_sources || '[]');
@@ -200,10 +214,14 @@ async function main() {
             url,
             snippet:    snippet.slice(0, 80),
             scraped_at: new Date().toISOString().slice(0, 10),
+            match_type: matchType,
           });
 
-          // editorial_badges = einmalige Source-Namen (für Listen-UI + Map-Marker)
-          const badges = [...new Set(existingSources.map(e => e.source))];
+          // editorial_badges (UI + Map-Marker) nur für exact matches
+          const existingBadges = JSON.parse(rows[0]?.editorial_badges || '[]');
+          const badges = badge
+            ? [...new Set([...existingBadges, source.name])]
+            : existingBadges;
 
           await conn.query(
             'UPDATE buedchen SET editorial_sources = ?, editorial_badges = ? WHERE id = ?',
