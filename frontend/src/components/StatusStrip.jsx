@@ -4,7 +4,7 @@ import '../styles/components/status-strip.css'
 export default function StatusStrip({ context, liveText }) {
   const { total, openNow } = useStats()
 
-  const live = liveText ?? `${total} Buden · ${openNow} offen`
+  const live = liveText ?? `${total} Büdchen · ${openNow} offen`
 
   return (
     <div className="status-strip">

@@ -58,6 +58,32 @@ const PLZ_VEEDEL = {
 
 const VEEDEL_NAMES = [...new Set(Object.values(PLZ_VEEDEL))]
 
+// Google Place Types die NIE ein Büdchen sind → Prüf-Queue statt Import
+const EXCLUDED_TYPES = new Set([
+  'travel_agency', 'tourist_attraction', 'lodging',
+  'supermarket', 'grocery_store', 'department_store',
+  'gas_station', 'restaurant', 'cafe', 'bar',
+  'bakery', 'pharmacy', 'bank', 'atm',
+  'clothing_store', 'hair_care', 'car_repair',
+]);
+
+// Namensmuster die auf Nicht-Büdchen hindeuten → Prüf-Queue statt Import
+const EXCLUDED_NAME_PATTERNS = [
+  /\bminimarkt\b/i, /\bsupermarkt\b/i, /\btankstelle\b/i,
+  /\bapotheke\b/i,  /\bbäckerei\b/i,   /\bstadtführung\b/i,
+  /\bwalking\s+(tour|cologne)\b/i, /\bhotel\b/i,
+  /\brewe\b/i,    /\bedeka\b/i,  /\baldi\b/i,   /\blidl\b/i,
+  /\bnetto\b/i,   /\bpenny\b/i,  /\btrinkgut\b/i, /\bgetränkemarkt\b/i,
+];
+
+function isExcluded(place) {
+  const name  = place.displayName?.text ?? '';
+  const types = place.types ?? [];
+  if (types.some(t => EXCLUDED_TYPES.has(t))) return `type:${types.find(t => EXCLUDED_TYPES.has(t))}`;
+  if (EXCLUDED_NAME_PATTERNS.some(re => re.test(name))) return `name:${name}`;
+  return null;
+}
+
 const SEARCH_QUERIES = [
   // Allgemeine Kölner Suche
   'Büdchen Köln',
@@ -90,7 +116,7 @@ async function textSearch(query, pageToken = null) {
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': API_KEY,
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,nextPageToken',
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.types,nextPageToken',
     },
     body: JSON.stringify(body),
   })
@@ -101,7 +127,7 @@ async function placeDetails(id) {
   const fields = [
     'id', 'displayName', 'formattedAddress', 'location',
     'rating', 'userRatingCount', 'currentOpeningHours',
-    'nationalPhoneNumber', 'websiteUri',
+    'nationalPhoneNumber', 'websiteUri', 'types',
   ].join(',')
 
   const res = await fetch(`${PLACES_BASE}/places/${id}?fields=${fields}&languageCode=de`, {
@@ -178,10 +204,52 @@ async function run() {
 
   // Phase 2: Details nur für neue Places abrufen
   let imported = 0
+  let excluded = 0
 
   for (const place of newPlaces) {
+    // Schnellprüfung auf Ausschluss anhand der Textsuche-Daten (types + name)
+    const quickReason = isExcluded(place)
+    if (quickReason) {
+      try {
+        await db.execute(`
+          INSERT INTO import_review_queue
+            (google_place_id, name, google_types, exclusion_reason)
+          VALUES (?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE exclusion_reason = VALUES(exclusion_reason)
+        `, [
+          place.id,
+          place.displayName?.text ?? null,
+          JSON.stringify(place.types ?? []),
+          quickReason,
+        ])
+      } catch { /* Tabelle existiert noch nicht — migration nötig */ }
+      excluded++
+      continue
+    }
+
     const detail = await placeDetails(place.id)
     await new Promise(r => setTimeout(r, 300))
+
+    // Zweite Prüfung mit vollständigen Details
+    const detailReason = isExcluded({ ...place, types: detail.types ?? place.types })
+    if (detailReason) {
+      try {
+        await db.execute(`
+          INSERT INTO import_review_queue
+            (google_place_id, name, address, google_types, exclusion_reason)
+          VALUES (?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE exclusion_reason = VALUES(exclusion_reason)
+        `, [
+          place.id,
+          detail.displayName?.text ?? place.displayName?.text ?? null,
+          detail.formattedAddress ?? null,
+          JSON.stringify(detail.types ?? []),
+          detailReason,
+        ])
+      } catch { /* Tabelle existiert noch nicht — migration nötig */ }
+      excluded++
+      continue
+    }
 
     const name     = detail.displayName?.text ?? place.displayName?.text ?? null
     const address  = detail.formattedAddress ?? ''
@@ -224,7 +292,7 @@ async function run() {
     process.stdout.write(`\r  ${imported}/${newPlaces.length} importiert`)
   }
 
-  console.log(`\nFertig. ${imported} neue Büdchen in DB geschrieben.`)
+  console.log(`\nFertig. ${imported} neue Büdchen in DB | ${excluded} in Prüf-Queue (import_review_queue).`)
   await db.end()
 }
 

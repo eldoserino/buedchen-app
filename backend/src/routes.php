@@ -43,13 +43,13 @@ $app->get('/api/buedchen', function (Request $request, Response $response) {
         $where[] = 'feature_coffee = 1';
     }
 
-    $sql = 'SELECT id, name, address, veedel, postcode, lat, lng,
+    $sql = 'SELECT id, name, COALESCE(display_name, name) AS display_name, address, veedel, postcode, lat, lng,
                    google_rating, google_review_count,
                    feature_seating, feature_coffee,
                    tags, editorial_badges, opening_hours
             FROM buedchen
             WHERE ' . implode(' AND ', $where) . '
-            ORDER BY JSON_LENGTH(editorial_badges) > 0 DESC, google_rating DESC
+            ORDER BY JSON_LENGTH(editorial_badges) > 0 DESC, bayesian_score DESC, google_rating DESC
             LIMIT 1000';
 
     $stmt = $db->prepare($sql);
