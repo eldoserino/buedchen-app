@@ -20,7 +20,7 @@ export default function MarkerPopup({ buedchen, onClose }) {
             <span>★ {buedchen.google_rating.toFixed(1)}</span>
           )}
         </div>
-        <div className="bottom-sheet__name">{buedchen.name}</div>
+        <div className="bottom-sheet__name">{buedchen.display_name ?? buedchen.name}</div>
         {buedchen.address && (
           <div className="bottom-sheet__info">{buedchen.address}</div>
         )}

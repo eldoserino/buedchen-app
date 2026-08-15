@@ -24,7 +24,7 @@ export default function BuedchenSegment({ buedchen, index }) {
         <span>{displayNum}</span>
       </div>
       <div className={`seg__name${large ? ' seg__name--lg' : ''}`}>
-        {buedchen.name}
+        {buedchen.display_name ?? buedchen.name}
       </div>
       <div className="seg__bot">
         {buedchen.google_rating != null && (

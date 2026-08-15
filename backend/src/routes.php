@@ -134,7 +134,8 @@ $app->get('/api/tours/{slug}', function (Request $request, Response $response, a
     }
 
     $stops = $db->prepare('
-        SELECT b.id, b.name, b.veedel, b.lat, b.lng, b.address,
+        SELECT b.id, b.name, COALESCE(b.display_name, b.name) AS display_name,
+               b.veedel, b.lat, b.lng, b.address,
                b.google_rating, b.feature_seating, b.feature_coffee,
                tb.sort_order
         FROM buedchen b

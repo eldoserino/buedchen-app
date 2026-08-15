@@ -65,7 +65,8 @@ class RouteGenerator {
         $lngDelta = $radiusM / (111000.0 * cos(deg2rad($lat)));
 
         $stmt = $this->pdo->prepare('
-            SELECT id, name, address, veedel, lat, lng,
+            SELECT id, name, COALESCE(display_name, name) AS display_name,
+                   address, veedel, lat, lng,
                    google_rating, buedchen_type, poi_distances,
                    character_tags, ai_summary, feature_seating,
                    editorial_sources
@@ -341,6 +342,7 @@ class RouteGenerator {
             'type'          => 'buedchen',
             'id'            => $s['id'],
             'name'          => $s['name'],
+            'display_name'  => $s['display_name'] ?? $s['name'],
             'lat'           => $s['lat'],
             'lng'           => $s['lng'],
             'score'         => round($s['score'] ?? 0.0, 3),

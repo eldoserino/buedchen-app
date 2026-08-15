@@ -182,7 +182,7 @@ function BuedchenStop({ stop }) {
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: '.95rem', textTransform: 'uppercase', lineHeight: 'var(--lh-md)' }}>
-          {stop.name}
+          {stop.display_name ?? stop.name}
         </div>
         {stop.veedel && (
           <div style={{ fontSize: '.5875rem', letterSpacing: '.12em', color: 'var(--on-creme-dim)', marginTop: 4, textTransform: 'uppercase' }}>
@@ -222,7 +222,7 @@ function PoiStop({ stop }) {
       </div>
       <div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '.75rem', fontWeight: 500, letterSpacing: '.03em' }}>
-          {stop.name}
+          {stop.display_name ?? stop.name}
         </div>
         <div style={{ fontSize: '.5875rem', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--on-creme-dim)', marginTop: 3 }}>
           {catLabel}

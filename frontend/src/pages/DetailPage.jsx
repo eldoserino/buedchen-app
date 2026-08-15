@@ -80,7 +80,7 @@ export default function DetailPage() {
             <span>{typeLabel(b.buedchen_type)}</span>
           </div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', lineHeight: 'var(--lh-xl)', letterSpacing: '-.03em', textTransform: 'uppercase' }}>
-            {b.name}
+            {b.display_name ?? b.name}
           </h1>
           {b.address && (
             <p style={{ fontSize: '.6875rem', letterSpacing: '.08em', opacity: .85, margin: 'var(--s-5) 0 var(--s-6)', lineHeight: 1.7 }}>

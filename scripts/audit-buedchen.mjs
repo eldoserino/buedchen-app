@@ -114,7 +114,7 @@ async function run() {
         ON DUPLICATE KEY UPDATE
           exclusion_reason = VALUES(exclusion_reason),
           decision = IF(decision = 'pending', 'pending', decision)
-      `, [c.google_place_id, c.name, c.address, `${c.exclusion_reason}|llm:${c.llm.reason}`]);
+      `, [c.google_place_id, c.name, c.address, `${c.exclusion_reason}|llm:${c.llm.reason}`.slice(0, 128)]);
       queued++;
     } catch {
       console.warn(`  ⚠️  import_review_queue existiert nicht — migrate-session05.sql zuerst ausführen`);

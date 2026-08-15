@@ -120,7 +120,7 @@ export default function TourDetailPage() {
                 {i + 1}
               </div>
               <div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '.9rem', textTransform: 'uppercase', lineHeight: 'var(--lh-md)' }}>{b.name}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '.9rem', textTransform: 'uppercase', lineHeight: 'var(--lh-md)' }}>{b.display_name ?? b.name}</div>
                 {b.veedel && <div style={{ fontSize: '.5875rem', letterSpacing: '.12em', color: 'var(--on-creme-dim)', marginTop: 4 }}>{b.veedel}</div>}
               </div>
             </Link>

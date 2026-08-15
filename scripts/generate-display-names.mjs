@@ -110,8 +110,8 @@ async function run() {
       nameSource  = 'address_fallback';
       addressFallback++;
     } else {
-      // Sicherheitsnetz: nie länger als 32 Zeichen
-      displayName = result.slice(0, 32).trim();
+      // Sicherheitsnetz: nie länger als 28 Zeichen
+      displayName = result.slice(0, 28).trim();
       nameSource  = 'ai_shortened';
       aiShortened++;
     }
