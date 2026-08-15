@@ -18,13 +18,14 @@ async function run() {
   const conn = await db.getConnection();
 
   // Globaler Durchschnitt C (nur Büdchen mit ≥ 5 Bewertungen, damit Ausreißer raus)
-  const [[{ C }]] = await conn.query(`
+  const [[{ C: rawC }]] = await conn.query(`
     SELECT AVG(google_rating) AS C
     FROM buedchen
     WHERE google_review_count >= 5 AND google_rating IS NOT NULL
   `);
+  const C = parseFloat(rawC);
 
-  if (!C) {
+  if (!C || isNaN(C)) {
     console.error('Kein Durchschnitt berechenbar — sind Ratings in der DB?');
     conn.release();
     await db.end();
