@@ -90,6 +90,7 @@ $app->get('/api/buedchen/{id}', function (Request $request, Response $response, 
     $row['character_tags']     = $row['character_tags']     ? json_decode($row['character_tags'])     : [];
     $row['poi_distances']      = $row['poi_distances']      ? json_decode($row['poi_distances'], true): null;
     $row['editorial_sources']  = $row['editorial_sources']  ? json_decode($row['editorial_sources'])  : [];
+    $row['location_context']   = $row['location_context']   ? json_decode($row['location_context'], true) : null;
     $row['lat']                = (float) $row['lat'];
     $row['lng']                = (float) $row['lng'];
     $row['google_rating']      = $row['google_rating']      !== null ? (float) $row['google_rating']      : null;
@@ -180,24 +181,38 @@ $app->get('/api/pois', function (Request $request, Response $response) {
         }
     }
 
+    if (isset($params['importance'])) {
+        $where[] = 'importance >= :importance';
+        $bind[':importance'] = (int) $params['importance'];
+    }
+
+    if (isset($params['tour_eligible']) && $params['tour_eligible'] !== '') {
+        $where[] = 'tour_eligible = :tour_eligible';
+        $bind[':tour_eligible'] = (int) $params['tour_eligible'];
+    }
+
+    $lat    = isset($params['lat'])    ? (float) $params['lat']    : null;
+    $lng    = isset($params['lng'])    ? (float) $params['lng']    : null;
+    $radius = isset($params['radius']) ? (int)   $params['radius'] : null;
+
+    $orderBy = ($lat !== null && $lng !== null) ? '' : 'ORDER BY importance DESC, name ASC';
+
     $sql = 'SELECT id, name, description, category, lat, lng,
-                   address, veedel, photo_path, osm_id, tags
+                   address, veedel, photo_path, osm_id, tags,
+                   importance, tour_eligible, opening_info, source
             FROM tour_pois
-            WHERE ' . implode(' AND ', $where) . '
-            ORDER BY name ASC';
+            WHERE ' . implode(' AND ', $where) . ' ' . $orderBy;
 
     $stmt = $db->prepare($sql);
     $stmt->execute($bind);
     $rows = $stmt->fetchAll();
 
-    $lat = isset($params['lat']) ? (float) $params['lat'] : null;
-    $lng = isset($params['lng']) ? (float) $params['lng'] : null;
-    $radius = isset($params['radius']) ? (int) $params['radius'] : null;
-
     foreach ($rows as &$row) {
-        $row['lat']  = (float) $row['lat'];
-        $row['lng']  = (float) $row['lng'];
-        $row['tags'] = $row['tags'] ? json_decode($row['tags']) : (object)[];
+        $row['lat']          = (float) $row['lat'];
+        $row['lng']          = (float) $row['lng'];
+        $row['tags']         = $row['tags'] ? json_decode($row['tags']) : (object)[];
+        $row['importance']   = (int)  $row['importance'];
+        $row['tour_eligible']= (bool) $row['tour_eligible'];
 
         if ($lat !== null && $lng !== null) {
             $dlat = deg2rad($row['lat'] - $lat);
@@ -216,6 +231,33 @@ $app->get('/api/pois', function (Request $request, Response $response) {
     }
 
     return jsonResponse($response, $rows);
+});
+
+// ──────────────────────────────────────────────────────────────────
+// GET /api/pois/:id
+// ──────────────────────────────────────────────────────────────────
+$app->get('/api/pois/{id}', function (Request $request, Response $response, array $args) {
+    $db   = $this->get('db');
+    $stmt = $db->prepare(
+        'SELECT id, name, description, category, lat, lng,
+                address, veedel, photo_path, osm_id, tags,
+                importance, tour_eligible, opening_info, source
+         FROM tour_pois WHERE id = :id AND is_active = 1'
+    );
+    $stmt->execute([':id' => $args['id']]);
+    $row = $stmt->fetch();
+
+    if (!$row) {
+        return jsonResponse($response, ['error' => 'not found'], 404);
+    }
+
+    $row['lat']          = (float) $row['lat'];
+    $row['lng']          = (float) $row['lng'];
+    $row['tags']         = $row['tags'] ? json_decode($row['tags']) : (object)[];
+    $row['importance']   = (int)  $row['importance'];
+    $row['tour_eligible']= (bool) $row['tour_eligible'];
+
+    return jsonResponse($response, $row);
 });
 
 // ──────────────────────────────────────────────────────────────────
