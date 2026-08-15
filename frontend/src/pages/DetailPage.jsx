@@ -4,6 +4,7 @@ import { Clock, MapPin, Note, Star, Path } from '@phosphor-icons/react'
 import StatusStrip from '../components/StatusStrip'
 import FloatBack from '../components/FloatBack'
 import Checker from '../components/Checker'
+import { locationLabel, nearbyText } from '../utils/locationLabel'
 
 const TAG_COLORS = ['var(--senf)', 'var(--pink)', 'var(--blau)']
 const TAG_FG     = ['var(--tinte)', 'var(--tinte)', '#fff']
@@ -77,7 +78,10 @@ export default function DetailPage() {
         <div style={{ background: 'var(--rot)', color: 'var(--on-rot)', padding: '112px var(--seg-x) 0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.5875rem', fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', opacity: .72, marginBottom: 'var(--s-5)' }}>
             <span>Veedel · {veedel}</span>
-            <span>{typeLabel(b.buedchen_type)}</span>
+            {locationLabel(b.location_context?.primary)
+              ? <span>{locationLabel(b.location_context.primary)}</span>
+              : <span>{typeLabel(b.buedchen_type)}</span>
+            }
           </div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', lineHeight: 'var(--lh-xl)', letterSpacing: '-.03em', textTransform: 'uppercase' }}>
             {b.display_name ?? b.name}
@@ -153,21 +157,33 @@ export default function DetailPage() {
           <InfoRow icon={<Note weight="fill" size={16} />} label="Ausstattung">
             {features}
           </InfoRow>
-          {b.poi_distances && (() => {
-            const d     = b.poi_distances
-            const parts = []
-            if (d.nearest_plaza_m != null && d.nearest_plaza_m < 800)
-              parts.push(`${d.nearest_plaza_m} m zum nächsten Platz`)
-            if (d.nearest_park_m  != null && d.nearest_park_m  < 800)
-              parts.push(`${d.nearest_park_m} m zum nächsten Park`)
-            if (d.rhein_m         != null && d.rhein_m         < 800)
-              parts.push(`${d.rhein_m} m zum Rhein`)
-            if (!parts.length) return null
-            return (
-              <InfoRow icon={<Path weight="fill" size={16} />} label="In der Nähe">
-                {parts.join(' · ')}
-              </InfoRow>
-            )
+          {(() => {
+            // location_context hat Priorität (echte Namen), poi_distances als Fallback
+            const locText = nearbyText(b.location_context)
+            if (locText) {
+              return (
+                <InfoRow icon={<Path weight="fill" size={16} />} label="In der Nähe">
+                  {locText}
+                </InfoRow>
+              )
+            }
+            if (b.poi_distances) {
+              const d = b.poi_distances
+              const parts = []
+              if (d.nearest_plaza_m != null && d.nearest_plaza_m < 800)
+                parts.push(`${d.nearest_plaza_m} m zum nächsten Platz`)
+              if (d.nearest_park_m  != null && d.nearest_park_m  < 800)
+                parts.push(`${d.nearest_park_m} m zum nächsten Park`)
+              if (d.rhein_m         != null && d.rhein_m         < 800)
+                parts.push(`${d.rhein_m} m zum Rhein`)
+              if (!parts.length) return null
+              return (
+                <InfoRow icon={<Path weight="fill" size={16} />} label="In der Nähe">
+                  {parts.join(' · ')}
+                </InfoRow>
+              )
+            }
+            return null
           })()}
         </div>
 

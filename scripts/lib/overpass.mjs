@@ -100,9 +100,135 @@ export function getBuedchenType(distances) {
   return 'straßenbüdchen';
 }
 
+// Overpass queries per category — eine pro Request um Timeouts zu vermeiden
+const COLOGNE_AREA = `area["name"="Köln"]["admin_level"="6"]["boundary"="administrative"]->.koeln;`;
+
+const CATEGORY_QUERIES = {
+  park: `
+[out:json][timeout:60];
+${COLOGNE_AREA}
+(
+  way["leisure"="park"]["name"](area.koeln);
+  way["leisure"="garden"]["access"!="private"]["name"](area.koeln);
+  relation["leisure"="park"]["name"](area.koeln);
+  node["leisure"="park"]["name"](area.koeln);
+);
+out center;
+`,
+  platz: `
+[out:json][timeout:60];
+${COLOGNE_AREA}
+(
+  node["place"="square"]["name"](area.koeln);
+  way["place"="square"]["name"](area.koeln);
+  way["highway"="pedestrian"]["area"="yes"]["name"](area.koeln);
+);
+out center;
+`,
+  aussicht: `
+[out:json][timeout:60];
+${COLOGNE_AREA}
+(
+  node["tourism"="viewpoint"]["name"](area.koeln);
+  way["tourism"="viewpoint"]["name"](area.koeln);
+);
+out center;
+`,
+  denkmal: `
+[out:json][timeout:60];
+${COLOGNE_AREA}
+(
+  node["historic"="monument"]["name"](area.koeln);
+  node["historic"="memorial"]["name"](area.koeln);
+  way["historic"="monument"]["name"](area.koeln);
+);
+out center;
+`,
+  markt: `
+[out:json][timeout:60];
+${COLOGNE_AREA}
+(
+  node["amenity"="marketplace"]["name"](area.koeln);
+  way["amenity"="marketplace"]["name"](area.koeln);
+);
+out center;
+`,
+  streetart: `
+[out:json][timeout:60];
+${COLOGNE_AREA}
+(
+  node["tourism"="artwork"]["name"](area.koeln);
+  way["tourism"="artwork"]["name"](area.koeln);
+);
+out center;
+`,
+  spielplatz: `
+[out:json][timeout:60];
+${COLOGNE_AREA}
+(
+  node["leisure"="playground"]["name"](area.koeln);
+  way["leisure"="playground"]["name"](area.koeln);
+);
+out center;
+`,
+  museum: `
+[out:json][timeout:60];
+${COLOGNE_AREA}
+(
+  node["tourism"="museum"]["name"](area.koeln);
+  way["tourism"="museum"]["name"](area.koeln);
+);
+out center;
+`,
+  biergarten: `
+[out:json][timeout:60];
+${COLOGNE_AREA}
+(
+  node["amenity"="biergarten"]["name"](area.koeln);
+  way["amenity"="biergarten"]["name"](area.koeln);
+);
+out center;
+`,
+  wasser: `
+[out:json][timeout:60];
+${COLOGNE_AREA}
+(
+  node["natural"="water"]["name"](area.koeln);
+  way["natural"="water"]["name"](area.koeln);
+  relation["natural"="water"]["name"](area.koeln);
+  node["leisure"="swimming_area"]["name"](area.koeln);
+);
+out center;
+`,
+};
+
+async function overpassQuery(queryStr) {
+  const res = await fetch(OVERPASS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `data=${encodeURIComponent(queryStr.trim())}`,
+  });
+  if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
+  const data = await res.json();
+  return data.elements || [];
+}
+
 /**
- * Overpass-Abfrage für das POI-Seeding (ganz Köln).
- * Gibt Array von Elementen mit center, tags, id zurück.
+ * Holt POIs für eine Kategorie aus Overpass (ganz Köln).
+ * @param {string} category — Key aus CATEGORY_QUERIES
+ * @returns {Array} Overpass-Elemente mit tags, center, id
+ */
+export async function fetchColognePoiCategory(category) {
+  const query = CATEGORY_QUERIES[category];
+  if (!query) throw new Error(`Unbekannte Kategorie: ${category}`);
+  return overpassQuery(query);
+}
+
+export const OSM_CATEGORIES = Object.keys(CATEGORY_QUERIES);
+
+/**
+ * Legacy: Overpass-Abfrage für das POI-Seeding (ganz Köln, alle Kategorien in einem Request).
+ * Veraltet — seed-pois.mjs nutzt fetchColognePoiCategory() pro Kategorie.
  */
 export async function fetchColognePois() {
   const query = `
@@ -120,12 +246,5 @@ area["name"="Köln"]["admin_level"="6"]->.cologne;
 out center;
 `.trim();
 
-  const res = await fetch(OVERPASS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
-  });
-  if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
-  const data = await res.json();
-  return data.elements || [];
+  return overpassQuery(query);
 }
