@@ -70,9 +70,16 @@ function estimateAreaM2(el) {
   return latM * lonM;
 }
 
-function importanceFromArea(areaM2) {
-  if (areaM2 === null || areaM2 > 50000) return 2;
-  if (areaM2 < 2000) return 1;
+// Kategorien, bei denen Nodes (ohne Fläche) eher kleine Objekte sind → importance=1
+const NODE_DEFAULT_LOW = new Set(['denkmal', 'streetart', 'spielplatz', 'museum', 'wasser', 'biergarten']);
+
+function importanceFromArea(areaM2, elType, cat) {
+  if (areaM2 === null) {
+    // Node ohne Fläche: bei punktuellen Kategorien niedrig, bei Flächen-Kategorien 2
+    return (elType === 'node' && NODE_DEFAULT_LOW.has(cat)) ? 1 : 2;
+  }
+  if (areaM2 > 50000) return 2;
+  if (areaM2 < 2000)  return 1;
   return 2;
 }
 
@@ -191,7 +198,7 @@ async function main() {
         if (isDuplicate) { skipped++; continue; }
 
         const areaM2     = estimateAreaM2(el);
-        const importance = importanceFromArea(areaM2);
+        const importance = importanceFromArea(areaM2, el.type, cat);
         const osmId      = `${el.type}/${el.id}`;
 
         const poi = {
