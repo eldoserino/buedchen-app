@@ -88,6 +88,12 @@ function computeContext(buedchen, allPois) {
   const usedCats = new Set(primary ? [primary.type] : []);
   const nearby   = [];
 
+  // Rhein in nearby aufnehmen wenn < 500m und nicht schon Primary vom Typ rheinufer
+  if (rhein_m < 500 && primary?.type !== 'rheinufer') {
+    nearby.push({ type: 'rheinufer', name: 'Rhein', distance_m: rhein_m, poi_id: null });
+    usedCats.add('rheinufer');
+  }
+
   // Erst-Durchlauf: je eine neue Kategorie
   for (const poi of candidates) {
     if (nearby.length >= 3) break;

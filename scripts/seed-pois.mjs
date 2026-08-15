@@ -138,12 +138,23 @@ async function main() {
 
   // ── Quelle B: Overpass API ────────────────────────────────────────
   if (!CURATED_ONLY) {
-    // Kuratierte IDs merken für Duplikat-Check
+    // Bekannte Koordinaten für Duplikat-Check (name+position)
     let curatedCoords = [];
     if (!OSM_ONLY) {
       const seedPath = join(__dir, 'data', 'pois-seed.json');
       const curated  = JSON.parse(readFileSync(seedPath, 'utf-8'));
       curatedCoords  = curated.map(p => ({ name: p.name.toLowerCase(), lat: p.lat, lng: p.lng }));
+    } else {
+      // --osm-only: bestehende non-OSM-POIs aus DB laden um Innenstadt-Duplikate zu vermeiden
+      const [existing] = await conn.query(
+        "SELECT name, lat, lng FROM tour_pois WHERE source IN ('curated','manual')"
+      );
+      curatedCoords = existing.map(p => ({
+        name: p.name.toLowerCase(),
+        lat: parseFloat(p.lat),
+        lng: parseFloat(p.lng),
+      }));
+      console.log(`\n   ${curatedCoords.length} bestehende kuratierte POIs als Duplikat-Basis geladen`);
     }
 
     for (const cat of OSM_CATEGORIES) {
