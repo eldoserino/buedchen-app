@@ -92,6 +92,12 @@ VERBOTEN — schlechtes Kölsch/Deutsch:
   ✗ Gestelzte Komposita: "Kölsch-Kundschaft", "Abend-Treffpunkt", "Stamm-Gäste"
   ✗ Adjektiv "verankert" in Bezug auf Stammgäste oder Tradition
 
+WORTWAHL — VERBINDLICH:
+  ✓ Verwende ausschließlich das Wort "Büdchen" wenn ein generischer Begriff nötig ist.
+  ✗ Verwende NIEMALS: Kiosk, Bude, Trinkhalle, Späti, Kaffeeladen
+  Ausnahme: wenn der Eigenname des Büdchens diese Wörter enthält,
+  bleibt der Eigenname unverändert (z.B. "Jazz Kiosk", "Kölnkiosk").
+
 SPRACHE: Natürliches, umgangssprachliches Deutsch. Kein Übersetzungsdeutsch.
   Gut: "Seit 40 Jahren die erste Adresse für Radfahrer am Rhein."
   Schlecht: "Jahrzehntelang verankerte Kundschaft schätzt diesen Treffpunkt."
