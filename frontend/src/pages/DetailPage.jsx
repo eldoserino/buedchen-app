@@ -4,7 +4,7 @@ import { Clock, MapPin, Note, Star, Path } from '@phosphor-icons/react'
 import StatusStrip from '../components/StatusStrip'
 import FloatBack from '../components/FloatBack'
 import Checker from '../components/Checker'
-import { locationLabel, nearbyText } from '../utils/locationLabel'
+import { locationLabel, nearbyLines } from '../utils/locationLabel'
 
 const TAG_COLORS = ['var(--senf)', 'var(--pink)', 'var(--blau)']
 const TAG_FG     = ['var(--tinte)', 'var(--tinte)', '#fff']
@@ -158,12 +158,11 @@ export default function DetailPage() {
             {features}
           </InfoRow>
           {(() => {
-            // location_context hat Priorität (echte Namen), poi_distances als Fallback
-            const locText = nearbyText(b.location_context)
-            if (locText) {
+            const lines = nearbyLines(b.location_context)
+            if (lines.length > 0) {
               return (
                 <InfoRow icon={<Path weight="fill" size={16} />} label="In der Nähe">
-                  {locText}
+                  {lines.map((l, i) => <span key={i} style={{ display: 'block' }}>{l}</span>)}
                 </InfoRow>
               )
             }
@@ -171,15 +170,15 @@ export default function DetailPage() {
               const d = b.poi_distances
               const parts = []
               if (d.nearest_plaza_m != null && d.nearest_plaza_m < 800)
-                parts.push(`${d.nearest_plaza_m} m zum nächsten Platz`)
+                parts.push(`Platz ${d.nearest_plaza_m} m`)
               if (d.nearest_park_m  != null && d.nearest_park_m  < 800)
-                parts.push(`${d.nearest_park_m} m zum nächsten Park`)
+                parts.push(`Park ${d.nearest_park_m} m`)
               if (d.rhein_m         != null && d.rhein_m         < 800)
-                parts.push(`${d.rhein_m} m zum Rhein`)
+                parts.push(`Rhein ${d.rhein_m} m`)
               if (!parts.length) return null
               return (
                 <InfoRow icon={<Path weight="fill" size={16} />} label="In der Nähe">
-                  {parts.join(' · ')}
+                  {parts.map((l, i) => <span key={i} style={{ display: 'block' }}>{l}</span>)}
                 </InfoRow>
               )
             }
