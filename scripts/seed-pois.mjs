@@ -24,6 +24,9 @@ const args    = process.argv.slice(2);
 const CURATED_ONLY = args.includes('--curated-only');
 const OSM_ONLY     = args.includes('--osm-only');
 const DRY_RUN      = args.includes('--dry-run');
+// --categories=park,platz begrenzt OSM-Fetch auf diese Kategorien
+const CATEGORIES_ARG = args.find(a => a.startsWith('--categories='));
+const ONLY_CATS = CATEGORIES_ARG ? new Set(CATEGORIES_ARG.split('=')[1].split(',')) : null;
 
 // OSM-Tag → interne Kategorie
 function osmCategory(tags) {
@@ -158,6 +161,7 @@ async function main() {
     }
 
     for (const cat of OSM_CATEGORIES) {
+      if (ONLY_CATS && !ONLY_CATS.has(cat)) continue;
       console.log(`\n🌍 OSM-Kategorie: ${cat} …`);
       let elements;
       try {

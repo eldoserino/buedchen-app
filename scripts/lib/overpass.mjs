@@ -205,7 +205,11 @@ out center;
 async function overpassQuery(queryStr) {
   const res = await fetch(OVERPASS_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent':   'buedchen-app/1.0 (https://buedchen.slightlymad.de)',
+      'Accept':       'application/json',
+    },
     body: `data=${encodeURIComponent(queryStr.trim())}`,
   });
   if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
